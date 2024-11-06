@@ -1,0 +1,18 @@
+#compiled output
+/build
+/dist
+
+#OS
+.DS_Store
+
+# packages
+node_modules
+
+# dotenv environment variable files
+.env
+
+# package lock file
+package-lock.json
+
+#tests
+coverage
