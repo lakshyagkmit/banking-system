@@ -1,19 +1,11 @@
 {
-    "auto_format_on_save": true,
-    "auto_format_on_save_excludes": [
-        "*/node_modules/*",
-        "*.json"
-    ],
     "arrowParens": "avoid",
     "bracketSpacing": true,
     "jsxBracketSameLine": false,
-    "parser": "babylon",
     "printWidth": 110,
     "semi": true,
     "tabWidth": 2,
     "singleQuote": true,
     "trailingComma": "es5",
-    "useTabs": false,
-    "allow_inline_formatting": false,
-    "use_local_babel": true,
+    "useTabs": false
 }
