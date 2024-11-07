@@ -1,0 +1,19 @@
+{
+  "name": "banking-system",
+  "version": "1.0.0",
+  "description": "Basic Banking System",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/lakshyagkmit/banking-system.git"
+  },
+  "author": "Lakshya Kr. Singh",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/lakshyagkmit/banking-system/issues"
+  },
+  "homepage": "https://github.com/lakshyagkmit/banking-system#readme"
+}
