@@ -20,6 +20,10 @@ module.exports = {
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE',
       },
+      branch_ifsc_code: {
+        type: Sequelize.STRING(20),
+        allowNull: false,
+      },
       account_type: {
         type: Sequelize.STRING(20),
         allowNull: false,
@@ -30,6 +34,7 @@ module.exports = {
       },
       nominee_name: {
         type: Sequelize.STRING(50),
+        allowNull: false,
       },
       created_at: {
         allowNull: false,

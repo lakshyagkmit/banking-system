@@ -7,8 +7,6 @@ module.exports = (sequelize, DataTypes) => {
       // Define associations here
       Application.belongsTo(models.User, {
         foreignKey: 'user_id',
-        onDelete: 'CASCADE',
-        onUpdate: 'CASCADE',
       });
     }
   }
@@ -24,6 +22,10 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.UUID,
         allowNull: false,
       },
+      branch_ifsc_code: {
+        type: DataTypes.STRING(20),
+        allowNull: false,
+      },
       account_type: {
         type: DataTypes.STRING(20),
         allowNull: false,
@@ -34,6 +36,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       nominee_name: {
         type: DataTypes.STRING(50),
+        allowNull: false,
       },
     },
     {
