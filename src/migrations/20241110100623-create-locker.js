@@ -17,8 +17,6 @@ module.exports = {
           model: 'branches',
           key: 'id',
         },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE',
       },
       serial_no: {
         type: Sequelize.STRING(20),

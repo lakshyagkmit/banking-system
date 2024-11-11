@@ -17,8 +17,6 @@ module.exports = {
           model: 'banks',
           key: 'id',
         },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE',
       },
       user_id: {
         type: Sequelize.UUID,
@@ -27,8 +25,6 @@ module.exports = {
           model: 'users',
           key: 'id',
         },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE',
       },
       name: {
         type: Sequelize.STRING(50),
