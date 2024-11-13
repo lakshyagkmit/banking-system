@@ -21,6 +21,7 @@ module.exports = {
           father_name: 'Randhir Kr. Singh',
           mother_name: 'Ragini Singh',
           address: 'Kolkata, India',
+          email_verified: true,
           is_verified: true,
         },
       ],
