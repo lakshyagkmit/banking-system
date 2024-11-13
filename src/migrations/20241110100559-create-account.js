@@ -3,6 +3,10 @@
 
 module.exports = {
   async up(queryInterface, Sequelize) {
+    await queryInterface.sequelize.query(`
+    CREATE TYPE "public"."enum_accounts_status" AS ENUM('active', 'inactive');
+  `);
+
     await queryInterface.createTable('accounts', {
       id: {
         type: Sequelize.UUID,
@@ -17,8 +21,6 @@ module.exports = {
           model: 'policies',
           key: 'id',
         },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE',
       },
       branch_id: {
         type: Sequelize.UUID,
@@ -27,8 +29,6 @@ module.exports = {
           model: 'branches',
           key: 'id',
         },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE',
       },
       user_id: {
         type: Sequelize.UUID,
@@ -37,14 +37,12 @@ module.exports = {
           model: 'users',
           key: 'id',
         },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE',
       },
-      account_type: {
+      type: {
         type: Sequelize.ENUM('savings', 'current', 'fixed', 'deposit'),
         allowNull: false,
       },
-      account_subtype: {
+      subtype: {
         type: Sequelize.STRING(50),
       },
       number: {
@@ -62,6 +60,7 @@ module.exports = {
       },
       nominee: {
         type: Sequelize.STRING(50),
+        allowNull: false,
       },
       installment_amount: {
         type: Sequelize.DECIMAL(20, 2),
@@ -71,6 +70,11 @@ module.exports = {
       },
       maturity_date: {
         type: Sequelize.DATE,
+      },
+      status: {
+        type: Sequelize.ENUM('active', 'inactive'),
+        allowNull: false,
+        defaultValue: 'inactive',
       },
       created_at: {
         allowNull: false,
@@ -90,5 +94,8 @@ module.exports = {
 
   async down(queryInterface, Sequelize) {
     await queryInterface.dropTable('accounts');
+    await queryInterface.sequelize.query(`
+    DROP TYPE IF EXISTS "public"."enum_accounts_status";
+  `);
   },
 };

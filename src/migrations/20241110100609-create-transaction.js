@@ -17,8 +17,6 @@ module.exports = {
           model: 'accounts',
           key: 'id',
         },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE',
       },
       from_account_no: {
         type: Sequelize.STRING(20),

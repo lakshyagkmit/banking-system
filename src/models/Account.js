@@ -40,11 +40,11 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.UUID,
         allowNull: false,
       },
-      account_type: {
+      type: {
         type: DataTypes.ENUM('savings', 'current', 'fixed', 'deposit'),
         allowNull: false,
       },
-      account_subtype: {
+      subtype: {
         type: DataTypes.STRING(50),
       },
       number: {
@@ -62,6 +62,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       nominee: {
         type: DataTypes.STRING(50),
+        allowNull: false,
       },
       installment_amount: {
         type: DataTypes.DECIMAL(20, 2),
@@ -71,6 +72,11 @@ module.exports = (sequelize, DataTypes) => {
       },
       maturity_date: {
         type: DataTypes.DATE,
+      },
+      status: {
+        type: DataTypes.ENUM('active', 'inactive'),
+        allowNull: false,
+        defaultValue: 'inactive',
       },
     },
     {

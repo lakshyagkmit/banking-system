@@ -7,8 +7,6 @@ module.exports = (sequelize, DataTypes) => {
       // Define association with banks table
       Policy.belongsTo(models.Bank, {
         foreignKey: 'bank_id',
-        onDelete: 'CASCADE',
-        onUpdate: 'CASCADE',
       });
     }
   }

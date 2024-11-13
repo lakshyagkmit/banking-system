@@ -52,6 +52,11 @@ module.exports = (sequelize, DataTypes) => {
       address: {
         type: DataTypes.TEXT,
       },
+      email_verified: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
       is_verified: {
         type: DataTypes.BOOLEAN,
         allowNull: false,

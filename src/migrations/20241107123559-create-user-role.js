@@ -17,8 +17,6 @@ module.exports = {
           model: 'users',
           key: 'id',
         },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE',
       },
       role_id: {
         type: Sequelize.UUID,
@@ -27,8 +25,6 @@ module.exports = {
           model: 'roles',
           key: 'id',
         },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE',
       },
       created_at: {
         allowNull: false,

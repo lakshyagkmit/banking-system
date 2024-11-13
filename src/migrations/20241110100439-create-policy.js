@@ -17,8 +17,6 @@ module.exports = {
           model: 'banks',
           key: 'id',
         },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE',
       },
       account_type: {
         type: Sequelize.ENUM('savings', 'current', 'fixed', 'deposit'),
