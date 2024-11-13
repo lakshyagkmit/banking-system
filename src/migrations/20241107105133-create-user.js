@@ -43,6 +43,11 @@ module.exports = {
       address: {
         type: Sequelize.TEXT,
       },
+      email_verified: {
+        type: Sequelize.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
       is_verified: {
         type: Sequelize.BOOLEAN,
         allowNull: false,
