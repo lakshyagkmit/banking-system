@@ -17,4 +17,15 @@ async function createBranchSchema(req, res, next) {
   validateHelper.validateRequest(req, res, next, schema, 'body');
 }
 
-module.exports = { createBranchSchema };
+async function updateBranchSchema(req, res, next) {
+  const schema = Joi.object({
+    name: Joi.string().max(50).optional(),
+    address: Joi.string().optional(),
+    ifscCode: Joi.string().max(20).optional(),
+    contact: Joi.string().optional(),
+    totalLockers: Joi.number().integer().optional(),
+  }).min(1);
+  validateHelper.validateRequest(req, res, next, schema, 'body');
+}
+
+module.exports = { createBranchSchema, updateBranchSchema };

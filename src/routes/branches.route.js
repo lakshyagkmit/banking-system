@@ -32,4 +32,13 @@ router.get(
   branchController.getById
 );
 
+router.put(
+  '/:id',
+  authMiddleware.checkAuthToken,
+  authMiddleware.authorizeRole(constants.ROLES['101']),
+  commonValidator.idSchema,
+  branchValidator.updateBranchSchema,
+  branchController.updateById
+);
+
 module.exports = router;

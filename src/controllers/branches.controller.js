@@ -34,4 +34,14 @@ async function getById(req, res) {
   }
 }
 
-module.exports = { create, get, getById };
+async function updateById(req, res) {
+  try {
+    const { params, body } = req;
+    const branch = await branchService.updateById(params.id, body);
+    res.status(200).json({ branch, message: 'User updated successfully' });
+  } catch (error) {
+    commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
+  }
+}
+
+module.exports = { create, get, getById, updateById };

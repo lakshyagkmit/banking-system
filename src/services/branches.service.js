@@ -92,4 +92,24 @@ async function listById(id) {
   return commonHelper.convertKeysToCamelCase(branch.dataValues);
 }
 
-module.exports = { create, list, listById };
+// update a branch by id
+async function updateById(id, payload) {
+  const transaction = await sequelize.transaction();
+  try {
+    const branch = await Branch.findByPk(id);
+    if (!branch) {
+      commonHelper.customError('Branch not found', 404);
+    }
+
+    const data = commonHelper.convertKeysToSnakeCase(payload);
+
+    const updatedBranch = await branch.update(data, { transaction });
+    await transaction.commit();
+    return commonHelper.convertKeysToCamelCase(updatedBranch.dataValues);
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+}
+
+module.exports = { create, list, listById, updateById };
