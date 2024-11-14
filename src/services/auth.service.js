@@ -115,7 +115,7 @@ async function verifyOtp(email, otp) {
     where: { email },
     include: {
       model: Role,
-      attributes: ['name'],
+      attributes: ['code'],
     },
   });
 
@@ -123,7 +123,7 @@ async function verifyOtp(email, otp) {
 
   return await jwtHelper.generateToken({
     id: user.id,
-    role: user.Roles[0].name,
+    role: user.Roles[0].code,
   });
 }
 
