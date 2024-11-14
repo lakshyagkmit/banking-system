@@ -1,4 +1,5 @@
 const express = require('express');
+const authMiddleware = require('../middlewares/auth.middleware');
 const multerMiddleware = require('../middlewares/multer.middleware');
 const fileValidator = require('../validators/files.validator');
 const authValidator = require('../validators/auth.validator');
@@ -20,5 +21,8 @@ router.post('/otp-login', authValidator.loginSchema, authController.login);
 router.post('/otp-verify', authValidator.otpSchema, authController.verifyOtp);
 
 router.post('/otp-resend', authController.resendOtp);
+
+// Protected route
+router.delete('/logout', authMiddleware.checkAuthToken, authController.logout);
 
 module.exports = router;

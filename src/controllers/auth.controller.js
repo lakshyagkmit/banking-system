@@ -51,4 +51,8 @@ const resendOtp = async (req, res) => {
   }
 };
 
-module.exports = { register, verifyEmail, login, verifyOtp, resendOtp };
+const logout = async (req, res) => {
+  res.status(204).send({ message: 'User logged out successfully' });
+};
+
+module.exports = { register, verifyEmail, login, verifyOtp, resendOtp, logout };
