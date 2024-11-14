@@ -17,4 +17,18 @@ function checkAuthToken(req, res, next) {
   });
 }
 
-module.exports = { checkAuthToken };
+// check user role
+function authorizeRole(code) {
+  return (req, res, next) => {
+    const roleArray = Array.isArray(code) ? code : [code];
+
+    if (!roleArray.includes(req.user.role)) {
+      return res.status(403).json({
+        error: 'Forbidden: You are not authorized to access this resource',
+      });
+    }
+    next();
+  };
+}
+
+module.exports = { checkAuthToken, authorizeRole };
