@@ -86,4 +86,10 @@ async function list(query) {
   };
 }
 
-module.exports = { create, list };
+// get a branch by id
+async function listById(id) {
+  const branch = await Branch.findByPk(id);
+  return commonHelper.convertKeysToCamelCase(branch.dataValues);
+}
+
+module.exports = { create, list, listById };

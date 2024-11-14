@@ -21,4 +21,17 @@ async function get(req, res) {
   }
 }
 
-module.exports = { create, get };
+async function getById(req, res) {
+  try {
+    const { id } = req.params;
+    const branch = await branchService.listById(id);
+    if (!branch) {
+      return res.status(404).json({ error: 'Branch not found' });
+    }
+    res.status(200).json(branch);
+  } catch (error) {
+    commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
+  }
+}
+
+module.exports = { create, get, getById };
