@@ -7,6 +7,10 @@ const otpHelper = require('../helpers/otps.helper');
 const jwtHelper = require('../helpers/jwt.helper');
 const awsHelper = require('../helpers/aws.helper');
 
+/**
+ * Registers a new user, assigns the 'Customer' role, uploads the govIssueId image,
+ * and sends an OTP to the user's email for verification.
+ */
 async function register(payload, file) {
   const transaction = await sequelize.transaction();
 
@@ -53,7 +57,6 @@ async function register(payload, file) {
     );
 
     await transaction.commit();
-
     await notificationHelper.sendOtp(email);
 
     return commonHelper.convertKeysToCamelCase(newUser.dataValues);
@@ -63,6 +66,10 @@ async function register(payload, file) {
   }
 }
 
+/**
+ * Verifies the user's email using an OTP. Updates the user's email verification
+ * status upon successful OTP validation.
+ */
 async function verifyEmail(email, otp) {
   if (!(await otpHelper.verifyOtp(email, otp))) {
     commonHelper.customError('Invalid OTP', 400);
@@ -80,10 +87,14 @@ async function verifyEmail(email, otp) {
   return;
 }
 
+/**
+ * Logs in a user by sending an OTP for verification. Checks that the user's
+ * email is verified before allowing login.
+ */
 async function login(email) {
   const user = await User.findOne({ where: { email, is_verified: true } });
   if (!user) {
-    commonHelper.customError(`user with email ${email} not exists`, 404);
+    commonHelper.customError(`User with email ${email} does not exist`, 404);
   }
 
   await notificationHelper.sendOtp(email);
@@ -91,6 +102,10 @@ async function login(email) {
   return user;
 }
 
+/**
+ * Verifies the user's OTP for login. Generates a JWT token on successful OTP verification
+ * and includes the user's role in the token payload.
+ */
 async function verifyOtp(email, otp) {
   if (!(await otpHelper.verifyOtp(email, otp))) {
     commonHelper.customError('Invalid OTP', 400);
@@ -112,6 +127,7 @@ async function verifyOtp(email, otp) {
   });
 }
 
+//Resends the OTP to the user's email for verification.
 async function resendOtp(email) {
   await notificationHelper.sendOtp(email);
   return;

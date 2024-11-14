@@ -1,6 +1,7 @@
 const Joi = require('joi');
 const commonHelper = require('../helpers/commonFunctions.helper');
 
+// file validator
 const fileValidationSchema = Joi.object({
   mimetype: Joi.string()
     .valid('image/png', 'image/jpg', 'image/jpeg')
@@ -11,7 +12,7 @@ const fileValidationSchema = Joi.object({
     .error(new Error('File size must be less than 5 MB')),
 }).unknown(true);
 
-const validateFile = (req, res, next) => {
+async function validateFile(req, res, next) {
   const { file } = req;
   console.log(file);
   const { error } = fileValidationSchema.validate(file);
@@ -19,6 +20,6 @@ const validateFile = (req, res, next) => {
     commonHelper.customError(error.message, 422);
   }
   next();
-};
+}
 
 module.exports = { validateFile };

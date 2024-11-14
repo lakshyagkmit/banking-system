@@ -1,6 +1,6 @@
 const { customErrorHandler } = require('./commonFunctions.helper');
 
-const validateRequest = (req, res, next, schema, requestParameterType) => {
+function validateRequest(req, res, next, schema, requestParameterType) {
   let requestData = {};
   if (requestParameterType === 'body') {
     requestData = req.body;
@@ -22,7 +22,7 @@ const validateRequest = (req, res, next, schema, requestParameterType) => {
     return next();
   }
   return customErrorHandler(req, res, error.message, 400, error);
-};
+}
 
 module.exports = {
   validateRequest,

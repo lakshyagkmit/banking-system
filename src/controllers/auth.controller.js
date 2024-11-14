@@ -11,7 +11,7 @@ async function register(req, res) {
   }
 }
 
-const verifyEmail = async (req, res) => {
+async function verifyEmail(req, res) {
   try {
     const { email, otp } = req.body;
     await authService.verifyEmail(email, otp);
@@ -19,9 +19,9 @@ const verifyEmail = async (req, res) => {
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
   }
-};
+}
 
-const login = async (req, res) => {
+async function login(req, res) {
   try {
     const { email } = req.body;
     await authService.login(email);
@@ -29,9 +29,9 @@ const login = async (req, res) => {
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
   }
-};
+}
 
-const verifyOtp = async (req, res) => {
+async function verifyOtp(req, res) {
   try {
     const { email, otp } = req.body;
     const token = await authService.verifyOtp(email, otp);
@@ -39,9 +39,9 @@ const verifyOtp = async (req, res) => {
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
   }
-};
+}
 
-const resendOtp = async (req, res) => {
+async function resendOtp(req, res) {
   try {
     const { email } = req.body;
     await authService.resendOtp(email);
@@ -49,10 +49,10 @@ const resendOtp = async (req, res) => {
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
   }
-};
+}
 
-const logout = async (req, res) => {
+async function logout(req, res) {
   res.status(204).send({ message: 'User logged out successfully' });
-};
+}
 
 module.exports = { register, verifyEmail, login, verifyOtp, resendOtp, logout };
