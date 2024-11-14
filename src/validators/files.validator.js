@@ -14,7 +14,6 @@ const fileValidationSchema = Joi.object({
 
 async function validateFile(req, res, next) {
   const { file } = req;
-  console.log(file);
   const { error } = fileValidationSchema.validate(file);
   if (error) {
     commonHelper.customError(error.message, 422);
