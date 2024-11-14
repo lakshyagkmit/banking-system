@@ -37,10 +37,17 @@ router.get(
 router.put(
   '/:id',
   authMiddleware.checkAuthToken,
-  authMiddleware.authorizeRole([constants.ROLES['101'], constants.ROLES['102']]),
   commonValidator.idSchema,
   userValidator.updateUserSchema,
   userController.updateById
+);
+
+router.delete(
+  '/:id',
+  authMiddleware.checkAuthToken,
+  authMiddleware.authorizeRole([constants.ROLES['101'], constants.ROLES['102']]),
+  commonValidator.idSchema,
+  userController.deleteById
 );
 
 module.exports = router;

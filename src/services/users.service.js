@@ -184,4 +184,33 @@ async function updateById(params, payload, user) {
   }
 }
 
-module.exports = { create, list, listById, updateById };
+// Soft delete a user by ID with role-based access control
+async function deleteById(id, user) {
+  const transaction = await sequelize.transaction();
+  try {
+    const { role } = user;
+    const userToDelete = await User.findByPk(id, {
+      include: Role,
+    });
+
+    if (!userToDelete) {
+      commonHelper.customError('User not found', 404);
+    }
+
+    const userRole = userToDelete.Roles[0].code;
+
+    if (
+      role === constants.ROLES['101'] ||
+      (role === constants.ROLES['102'] && userRole === constants.ROLES['102'])
+    ) {
+      await userToDelete.destroy({ transaction });
+      await transaction.commit();
+      return;
+    }
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+}
+
+module.exports = { create, list, listById, updateById, deleteById };
