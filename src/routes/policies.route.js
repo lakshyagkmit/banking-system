@@ -32,4 +32,21 @@ router.get(
   policyController.getById
 );
 
+router.put(
+  '/:id',
+  authMiddleware.checkAuthToken,
+  authMiddleware.authorizeRole(constants.ROLES['101']),
+  commonValidator.idSchema,
+  policyValidator.updatePolicySchema,
+  policyController.updateById
+);
+
+router.delete(
+  '/:id',
+  authMiddleware.checkAuthToken,
+  authMiddleware.authorizeRole(constants.ROLES['101']),
+  commonValidator.idSchema,
+  policyController.deleteById
+);
+
 module.exports = router;

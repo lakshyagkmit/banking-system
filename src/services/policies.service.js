@@ -74,4 +74,40 @@ async function listById(id) {
   return commonHelper.convertKeysToCamelCase(policy.dataValues);
 }
 
-module.exports = { create, list, listById };
+// update a policy by id
+async function updateById(id, payload) {
+  const transaction = await sequelize.transaction();
+  try {
+    const policy = await Policy.findByPk(id);
+    if (!policy) {
+      commonHelper.customError('Policy not found', 404);
+    }
+
+    const data = commonHelper.convertKeysToSnakeCase(payload);
+
+    const updatedPolicy = await policy.update(data, { transaction });
+    await transaction.commit();
+    return commonHelper.convertKeysToCamelCase(updatedPolicy.dataValues);
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+}
+
+// delete policy by id
+async function deleteById(id) {
+  const transaction = await sequelize.transaction();
+  try {
+    const policy = await Policy.findByPk(id);
+    if (!policy) {
+      commonHelper.customError('Policy not found', 404);
+    }
+    await policy.destroy({ transaction });
+    await transaction.commit();
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+}
+
+module.exports = { create, list, listById, updateById, deleteById };
