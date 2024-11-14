@@ -34,4 +34,14 @@ async function getById(req, res) {
   }
 }
 
-module.exports = { create, get, getById };
+async function updateById(req, res) {
+  try {
+    const { params, body, user } = req;
+    const userData = await userService.updateById(params, body, user);
+    res.status(200).json({ userData, message: 'User updated successfully' });
+  } catch (error) {
+    commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
+  }
+}
+
+module.exports = { create, get, getById, updateById };

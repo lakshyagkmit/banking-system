@@ -145,4 +145,43 @@ async function listById(params, user) {
   return commonHelper.convertKeysToCamelCase(users.dataValues);
 }
 
-module.exports = { create, list, listById };
+// Update a user by ID with role-based access control
+async function updateById(params, payload, user) {
+  const transaction = await sequelize.transaction();
+
+  try {
+    const { id } = params;
+    const { role } = user;
+
+    const userToUpdate = await User.findOne({
+      where: { id },
+      include: {
+        model: Role,
+        through: { attributes: [] },
+        attributes: ['code'],
+      },
+    });
+
+    if (!userToUpdate) {
+      commonHelper.customError('User not found', 404);
+    }
+
+    const userRole = userToUpdate.Roles[0].code;
+
+    if (
+      role === constants.ROLES['101'] ||
+      (role === constants.ROLES['102'] && userRole === constants.ROLES['103'])
+    ) {
+      const data = commonHelper.convertKeysToSnakeCase(payload);
+
+      const updatedUser = await userToUpdate.update(data, { transaction });
+      await transaction.commit();
+      return commonHelper.convertKeysToCamelCase(updatedUser.dataValues);
+    }
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+}
+
+module.exports = { create, list, listById, updateById };

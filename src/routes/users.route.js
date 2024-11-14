@@ -29,9 +29,18 @@ router.get(
 router.get(
   '/:id',
   authMiddleware.checkAuthToken,
-  authMiddleware.authorizeRole(['Admin', 'Branch Manager']),
+  authMiddleware.authorizeRole([constants.ROLES['101'], constants.ROLES['102']]),
   commonValidator.idSchema,
   userController.getById
+);
+
+router.put(
+  '/:id',
+  authMiddleware.checkAuthToken,
+  authMiddleware.authorizeRole([constants.ROLES['101'], constants.ROLES['102']]),
+  commonValidator.idSchema,
+  userValidator.updateUserSchema,
+  userController.updateById
 );
 
 module.exports = router;
