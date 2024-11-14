@@ -11,4 +11,14 @@ async function create(req, res) {
   }
 }
 
-module.exports = { create };
+async function get(req, res) {
+  try {
+    const { query } = req;
+    const branches = await branchService.list(query);
+    res.status(200).json(branches);
+  } catch (error) {
+    commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
+  }
+}
+
+module.exports = { create, get };

@@ -62,4 +62,28 @@ async function create(payload) {
   }
 }
 
-module.exports = { create };
+// get all branches;
+async function list(query) {
+  const { page, limit } = query;
+  const offset = (page - 1) * limit;
+
+  const branches = await Branch.findAndCountAll({
+    offset: offset,
+    limit: limit,
+  });
+
+  if (!branches.rows.length) {
+    commonHelper.customError('No branches found', 404);
+  }
+
+  const branchesData = branches.rows.map(branch => commonHelper.convertKeysToCamelCase(branch.dataValues));
+
+  return {
+    branches: branchesData,
+    totalBranches: branches.count,
+    currentPage: page,
+    totalPages: Math.ceil(branches.count / limit),
+  };
+}
+
+module.exports = { create, list };
