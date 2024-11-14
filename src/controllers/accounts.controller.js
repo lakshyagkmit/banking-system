@@ -34,4 +34,24 @@ async function getById(req, res) {
   }
 }
 
-module.exports = { create, get, getById };
+async function updateById(req, res) {
+  try {
+    const { params, body, user } = req;
+    const account = await accountService.updateById(params, body, user);
+    res.status(200).json({ account, message: 'User updated successfully' });
+  } catch (error) {
+    commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
+  }
+}
+
+async function deleteById(req, res) {
+  try {
+    const { params, user } = req;
+    await accountService.deleteById(params.id, user);
+    res.status(204).send({ message: 'Account deleted successfully' });
+  } catch (error) {
+    commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
+  }
+}
+
+module.exports = { create, get, getById, updateById, deleteById };

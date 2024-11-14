@@ -13,12 +13,29 @@ router.post(
   '/',
   authMiddleware.checkAuthToken,
   authMiddleware.authorizeRole(constants.ROLES['102']),
-  accountValidator.accountsSchema,
+  accountValidator.accountsCreateSchema,
   accountController.create
 );
 
 router.get('/', authMiddleware.checkAuthToken, commonValidator.limitPageSchema, accountController.get);
 
 router.get('/:id', authMiddleware.checkAuthToken, commonValidator.idSchema, accountController.getById);
+
+router.put(
+  '/:id',
+  authMiddleware.checkAuthToken,
+  authMiddleware.authorizeRole(constants.ROLES['102']),
+  commonValidator.idSchema,
+  accountValidator.accountsUpdateSchema,
+  accountController.updateById
+);
+
+router.delete(
+  '/:id',
+  authMiddleware.checkAuthToken,
+  authMiddleware.authorizeRole(constants.ROLES['102']),
+  commonValidator.idSchema,
+  accountController.deleteById
+);
 
 module.exports = router;

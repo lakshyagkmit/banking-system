@@ -2,7 +2,7 @@ const Joi = require('joi');
 const validateHelper = require('../helpers/validates.helper');
 
 //create account validator
-async function accountsSchema(req, res, next) {
+async function accountsCreateSchema(req, res, next) {
   const schema = Joi.object({
     userId: Joi.string().guid({ version: 'uuidv4' }).required(),
     type: Joi.string().valid('savings', 'current').required(),
@@ -16,4 +16,13 @@ async function accountsSchema(req, res, next) {
   validateHelper.validateRequest(req, res, next, schema, 'body');
 }
 
-module.exports = { accountsSchema };
+// account update schema
+async function accountsUpdateSchema(req, res, next) {
+  const schema = Joi.object({
+    nominee: Joi.string().max(50).optional(),
+  }).min(1);
+
+  validateHelper.validateRequest(req, res, next, schema, 'body');
+}
+
+module.exports = { accountsCreateSchema, accountsUpdateSchema };

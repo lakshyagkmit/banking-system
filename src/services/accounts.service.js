@@ -186,4 +186,70 @@ async function listById(params, user) {
   return commonHelper.convertKeysToCamelCase(account.dataValues);
 }
 
-module.exports = { create, list, listById };
+// Update account details by id
+async function updateById(params, payload, user) {
+  const transaction = await sequelize.transaction();
+
+  try {
+    const accountId = params.id;
+
+    const account = await Account.findOne({
+      where: { id: accountId },
+    });
+
+    if (!account) {
+      commonHelper.customError('Account not found', 404);
+    }
+
+    const branch = await Branch.findOne({
+      where: { user_id: user.id },
+    });
+
+    if (account.branch_id !== branch.id) {
+      commonHelper.customError('You can only update accounts of customers in your branch', 403);
+    }
+
+    const data = commonHelper.convertKeysToSnakeCase(payload);
+
+    const updatedAccount = await account.update(data, { transaction });
+    await transaction.commit();
+
+    return commonHelper.convertKeysToCamelCase(updatedAccount.dataValues);
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+}
+
+// soft delete account by id
+async function deleteById(id, user) {
+  const transaction = await sequelize.transaction();
+
+  try {
+    const account = await Account.findOne({
+      where: { id },
+    });
+
+    if (!account) {
+      commonHelper.customError('Account not found', 404);
+    }
+
+    const branch = await Branch.findOne({
+      where: { user_id: user.id },
+    });
+
+    if (account.branch_id !== branch.id) {
+      commonHelper.customError('You can only delete accounts of customers in your branch', 403);
+    }
+
+    await account.destroy({ transaction });
+    await transaction.commit();
+
+    return;
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+}
+
+module.exports = { create, list, listById, updateById, deleteById };
