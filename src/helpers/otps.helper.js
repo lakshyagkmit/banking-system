@@ -9,4 +9,15 @@ const saveOtp = (email, otp) => {
   return redisClient.set(key, otp, 'EX', 60);
 };
 
-module.exports = { generateOtp, saveOtp };
+const verifyOtp = async (email, otp) => {
+  const key = `otp:${email}`;
+  const storedOtp = await redisClient.get(key);
+  return storedOtp === otp;
+};
+
+const deleteOtp = email => {
+  const key = `otp:${email}`;
+  return redisClient.del(key);
+};
+
+module.exports = { generateOtp, saveOtp, verifyOtp, deleteOtp };

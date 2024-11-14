@@ -18,4 +18,13 @@ const registerSchema = async (req, res, next) => {
   validateHelper.validateRequest(req, res, next, schema, 'body');
 };
 
-module.exports = { registerSchema };
+const otpSchema = async (req, res, next) => {
+  const schema = Joi.object({
+    email: Joi.string().email().required(),
+    otp: Joi.string().length(6).required(),
+  });
+
+  validateHelper.validateRequest(req, res, next, schema, 'body');
+};
+
+module.exports = { registerSchema, otpSchema };

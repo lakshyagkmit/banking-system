@@ -11,4 +11,14 @@ async function register(req, res) {
   }
 }
 
-module.exports = { register };
+const verifyEmail = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    await authService.verifyEmail(email, otp);
+    res.status(200).json({ message: 'Email Verified Successfully' });
+  } catch (error) {
+    commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
+  }
+};
+
+module.exports = { register, verifyEmail };

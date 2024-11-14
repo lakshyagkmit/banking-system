@@ -14,5 +14,6 @@ router.post(
   authValidator.registerSchema,
   authController.register
 );
+router.post('/verify-email', authValidator.otpSchema, authController.verifyEmail);
 
 module.exports = router;

@@ -3,6 +3,7 @@ const { Op } = require('sequelize');
 const bcrypt = require('bcryptjs');
 const notificationHelper = require('../helpers/notifications.helper');
 const commonHelper = require('../helpers/commonFunctions.helper');
+const otpHelper = require('../helpers/otps.helper');
 const awsHelper = require('../helpers/aws.helper');
 
 async function register(payload, file) {
@@ -61,4 +62,21 @@ async function register(payload, file) {
   }
 }
 
-module.exports = { register };
+async function verifyEmail(email, otp) {
+  if (!(await otpHelper.verifyOtp(email, otp))) {
+    commonHelper.customError('Invalid OTP', 400);
+  }
+
+  const user = await User.findOne({
+    where: { email },
+  });
+
+  await user.update({
+    email_verified: true,
+  });
+
+  otpHelper.deleteOtp(email);
+  return;
+}
+
+module.exports = { register, verifyEmail };
