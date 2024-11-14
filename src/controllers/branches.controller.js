@@ -44,4 +44,21 @@ async function updateById(req, res) {
   }
 }
 
-module.exports = { create, get, getById, updateById };
+async function deleteById(req, res) {
+  try {
+    const { id } = req.params;
+    await branchService.deleteById(id);
+    res.status(204).send({ message: 'Branch deleted successfully' });
+  } catch (error) {
+    commonHelper.customErrorHandler(
+      req,
+      res,
+      error.message,
+      error.statusCode,
+      error
+    );
+  }
+}
+
+
+module.exports = { create, get, getById, updateById, deleteById };

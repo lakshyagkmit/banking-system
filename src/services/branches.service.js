@@ -112,4 +112,20 @@ async function updateById(id, payload) {
   }
 }
 
-module.exports = { create, list, listById, updateById };
+// delete branch by id
+async function deleteById(id) {
+  const transaction = await sequelize.transaction();
+  try {
+    const branch = await Branch.findByPk(id);
+    if (!branch) {
+      commonHelper.customError('Branch not found', 404);
+    }
+    await branch.destroy({ transaction });
+    await transaction.commit();
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+}
+
+module.exports = { create, list, listById, updateById, deleteById };
