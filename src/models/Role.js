@@ -25,6 +25,11 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         unique: true,
       },
+      code: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        unique: true,
+      },
     },
     {
       sequelize,
