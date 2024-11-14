@@ -21,4 +21,17 @@ async function get(req, res) {
   }
 }
 
-module.exports = { create, get };
+async function getById(req, res) {
+  try {
+    const { params, user } = req;
+    const userData = await userService.listById(params, user);
+    if (!userData) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.status(200).json(userData);
+  } catch (error) {
+    commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
+  }
+}
+
+module.exports = { create, get, getById };

@@ -9,4 +9,15 @@ async function limitPageSchema(req, res, next) {
   validateHelper.validateRequest(req, res, next, schema, 'query');
 }
 
-module.exports = { limitPageSchema };
+const idSchema = async (req, res, next) => {
+  const schema = Joi.object({
+    id: Joi.string()
+      .guid({
+        version: ['uuidv4'],
+      })
+      .required(),
+  });
+  validateHelper.validateRequest(req, res, next, schema, 'params');
+};
+
+module.exports = { limitPageSchema, idSchema };

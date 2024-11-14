@@ -26,4 +26,12 @@ router.get(
   userController.get
 );
 
+router.get(
+  '/:id',
+  authMiddleware.checkAuthToken,
+  authMiddleware.authorizeRole(['Admin', 'Branch Manager']),
+  commonValidator.idSchema,
+  userController.getById
+);
+
 module.exports = router;

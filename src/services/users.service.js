@@ -119,4 +119,30 @@ async function list(query, user) {
   };
 }
 
-module.exports = { create, list };
+// Get a user by ID with access control
+async function listById(params, user) {
+  const { id } = params;
+  const { role } = user;
+
+  let roles;
+  if (user.id === id) {
+    roles = [role];
+  } else if (role === constants.ROLES['101']) {
+    roles = [constants.ROLES['102'], constants.ROLES['103']];
+  } else {
+    roles = constants.ROLES['103'];
+  }
+
+  const users = await User.findOne({
+    where: { id },
+    include: {
+      model: Role,
+      where: { code: roles },
+      through: { attributes: [] },
+    },
+  });
+
+  return commonHelper.convertKeysToCamelCase(users.dataValues);
+}
+
+module.exports = { create, list, listById };
