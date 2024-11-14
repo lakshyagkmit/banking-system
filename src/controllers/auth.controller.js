@@ -41,4 +41,14 @@ const verifyOtp = async (req, res) => {
   }
 };
 
-module.exports = { register, verifyEmail, login, verifyOtp };
+const resendOtp = async (req, res) => {
+  try {
+    const { email } = req.body;
+    await authService.resendOtp(email);
+    res.status(200).json({ message: 'OTP Resent to email' });
+  } catch (error) {
+    commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
+  }
+};
+
+module.exports = { register, verifyEmail, login, verifyOtp, resendOtp };

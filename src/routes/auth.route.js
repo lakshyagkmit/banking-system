@@ -19,4 +19,6 @@ router.post('/verify-email', authValidator.otpSchema, authController.verifyEmail
 router.post('/otp-login', authValidator.loginSchema, authController.login);
 router.post('/otp-verify', authValidator.otpSchema, authController.verifyOtp);
 
+router.post('/otp-resend', authController.resendOtp);
+
 module.exports = router;

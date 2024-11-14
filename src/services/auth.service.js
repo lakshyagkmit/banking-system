@@ -112,4 +112,9 @@ async function verifyOtp(email, otp) {
   });
 }
 
-module.exports = { register, verifyEmail, login, verifyOtp };
+async function resendOtp(email) {
+  await notificationHelper.sendOtp(email);
+  return;
+}
+
+module.exports = { register, verifyEmail, login, verifyOtp, resendOtp };
