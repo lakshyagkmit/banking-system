@@ -44,4 +44,34 @@ async function create(payload) {
   }
 }
 
-module.exports = { create };
+// list all policies
+async function list(query) {
+  const { page, limit } = query;
+  const offset = (page - 1) * limit;
+
+  const policies = await Policy.findAndCountAll({
+    offset: offset,
+    limit: limit,
+  });
+
+  if (!policies.rows.length) {
+    commonHelper.customError('No policies found', 404);
+  }
+
+  const policiesData = policies.rows.map(policy => commonHelper.convertKeysToCamelCase(policy.dataValues));
+
+  return {
+    policies: policiesData,
+    totalPolicies: policies.count,
+    currentPage: page,
+    totalPages: Math.ceil(policies.count / limit),
+  };
+}
+
+// get a policy by id
+async function listById(id) {
+  const policy = await Policy.findByPk(id);
+  return commonHelper.convertKeysToCamelCase(policy.dataValues);
+}
+
+module.exports = { create, list, listById };
