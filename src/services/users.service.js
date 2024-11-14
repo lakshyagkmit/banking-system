@@ -22,7 +22,7 @@ async function create(payload, file, user) {
       emailVerified,
       isVerified,
     } = payload;
-    const code = user.role;
+    const role = user.role;
 
     const existingUser = await User.findOne({
       where: {
@@ -56,7 +56,7 @@ async function create(payload, file, user) {
     );
 
     const usersRole = await Role.findOne({
-      where: { code: code === constants.ROLES['101'] ? constants.ROLES['102'] : constants.ROLES['103'] },
+      where: { code: role === constants.ROLES['101'] ? constants.ROLES['102'] : constants.ROLES['103'] },
     });
 
     await UserRole.create(
@@ -75,4 +75,48 @@ async function create(payload, file, user) {
   }
 }
 
-module.exports = { create };
+// List users (Branch Manager and Customer if Admin, only Customers if Branch Manager)
+async function list(query, user) {
+  const { page, limit, userRole } = query;
+  const { role } = user;
+
+  let roles;
+  if (role === constants.ROLES['101'] && userRole === constants.ROLES['103']) {
+    roles = [constants.ROLES['103']];
+  } else if (role === constants.ROLES['101'] && userRole === constants.ROLES['102']) {
+    roles = [constants.ROLES['102']];
+  } else {
+    if (role === constants.ROLES['101']) {
+      roles = [constants.ROLES['102'], constants.ROLES['103']];
+    } else {
+      roles = [constants.ROLES['103']];
+    }
+  }
+
+  const offset = (page - 1) * limit;
+
+  const users = await User.findAndCountAll({
+    include: {
+      model: Role,
+      where: { code: roles },
+      through: { attributes: [] },
+    },
+    offset: offset,
+    limit: limit,
+  });
+
+  if (!users.rows.length) {
+    commonHelper.customError('No users found', 404);
+  }
+
+  const usersData = users.rows.map(user => commonHelper.convertKeysToCamelCase(user.dataValues));
+
+  return {
+    totalItems: users.count,
+    totalPages: Math.ceil(users.count / limit),
+    currentPage: page,
+    data: usersData,
+  };
+}
+
+module.exports = { create, list };
