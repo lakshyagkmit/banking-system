@@ -21,4 +21,14 @@ const verifyEmail = async (req, res) => {
   }
 };
 
-module.exports = { register, verifyEmail };
+const login = async (req, res) => {
+  try {
+    const { email } = req.body;
+    await authService.login(email);
+    res.status(200).json({ message: 'OTP Sent on email' });
+  } catch (error) {
+    commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
+  }
+};
+
+module.exports = { register, verifyEmail, login };

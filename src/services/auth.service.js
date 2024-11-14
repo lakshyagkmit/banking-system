@@ -79,4 +79,15 @@ async function verifyEmail(email, otp) {
   return;
 }
 
-module.exports = { register, verifyEmail };
+async function login(email) {
+  const user = await User.findOne({ where: { email, is_verified: true } });
+  if (!user) {
+    commonHelper.customError(`user with email ${email} not exists`, 404);
+  }
+
+  await notificationHelper.sendOtp(email);
+
+  return user;
+}
+
+module.exports = { register, verifyEmail, login };
