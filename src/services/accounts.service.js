@@ -89,4 +89,101 @@ async function create(payload, user) {
   }
 }
 
-module.exports = { create };
+// List accounts
+async function list(query, user) {
+  const { page, limit } = query;
+  const { role } = user;
+
+  const offset = (page - 1) * limit;
+
+  let accounts;
+  if (role === constants.ROLES['101']) {
+    accounts = await Account.findAndCountAll({
+      offset: offset,
+      limit: limit,
+    });
+  } else if (role === constants.ROLES['102']) {
+    const branch = await Branch.findOne({
+      where: { user_id: user.id },
+    });
+    accounts = await Account.findAndCountAll({
+      where: { branch_id: branch.id },
+      offset: offset,
+      limit: limit,
+    });
+  } else if (user.role === constants.ROLES['103']) {
+    accounts = await Account.findAndCountAll({
+      where: { user_id: user.id },
+      offset: offset,
+      limit: limit,
+    });
+  }
+
+  if (!accounts.rows.length) {
+    commonHelper.customError('No accounts found', 404);
+  }
+
+  const accountsData = accounts.rows.map(account => commonHelper.convertKeysToCamelCase(account.dataValues));
+
+  return {
+    totalItems: accounts.count,
+    totalPages: Math.ceil(accounts.count / limit),
+    currentPage: page,
+    data: accountsData,
+  };
+}
+
+// Get a account by id
+async function listById(params, user) {
+  const accountId = params.id;
+  const role = user.role;
+
+  let account;
+  if (role === constants.ROLES['103']) {
+    account = await Account.findOne({
+      where: { id: accountId, user_id: user.id },
+      include: {
+        model: User,
+      },
+    });
+  }
+
+  if (role === constants.ROLES['101']) {
+    account = Account.findOne({
+      where: { id: accountId },
+      include: [
+        {
+          model: User,
+        },
+        {
+          model: Branch,
+        },
+      ],
+    });
+  }
+
+  if (role === constants.ROLES['102']) {
+    const branch = await Branch.findOne({
+      where: { user_id: user.id },
+    });
+
+    account = await Account.findOne({
+      where: {
+        id: accountId,
+        branch_id: branch.id,
+      },
+      include: [
+        {
+          model: User,
+        },
+        {
+          model: Branch,
+        },
+      ],
+    });
+  }
+
+  return commonHelper.convertKeysToCamelCase(account.dataValues);
+}
+
+module.exports = { create, list, listById };
