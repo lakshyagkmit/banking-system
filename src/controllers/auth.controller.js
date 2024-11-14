@@ -31,4 +31,14 @@ const login = async (req, res) => {
   }
 };
 
-module.exports = { register, verifyEmail, login };
+const verifyOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    const token = await authService.verifyOtp(email, otp);
+    res.status(200).json({ message: 'Logged in', token });
+  } catch (error) {
+    commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
+  }
+};
+
+module.exports = { register, verifyEmail, login, verifyOtp };

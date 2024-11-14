@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const notificationHelper = require('../helpers/notifications.helper');
 const commonHelper = require('../helpers/commonFunctions.helper');
 const otpHelper = require('../helpers/otps.helper');
+const jwtHelper = require('../helpers/jwt.helper');
 const awsHelper = require('../helpers/aws.helper');
 
 async function register(payload, file) {
@@ -90,4 +91,25 @@ async function login(email) {
   return user;
 }
 
-module.exports = { register, verifyEmail, login };
+async function verifyOtp(email, otp) {
+  if (!(await otpHelper.verifyOtp(email, otp))) {
+    commonHelper.customError('Invalid OTP', 400);
+  }
+
+  const user = await User.findOne({
+    where: { email },
+    include: {
+      model: Role,
+      attributes: ['name'],
+    },
+  });
+
+  otpHelper.deleteOtp(email);
+
+  return await jwtHelper.generateToken({
+    id: user.id,
+    role: user.Roles[0].name,
+  });
+}
+
+module.exports = { register, verifyEmail, login, verifyOtp };
