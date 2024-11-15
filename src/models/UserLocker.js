@@ -30,7 +30,7 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
       },
       status: {
-        type: DataTypes.ENUM('available', 'freezed'),
+        type: DataTypes.ENUM('active', 'inactive'),
         allowNull: false,
       },
     },

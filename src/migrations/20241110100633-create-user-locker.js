@@ -27,7 +27,7 @@ module.exports = {
         },
       },
       status: {
-        type: Sequelize.ENUM('available', 'freezed'),
+        type: Sequelize.ENUM('active', 'inactive'),
         allowNull: false,
       },
       created_at: {

@@ -24,19 +24,19 @@ module.exports = (sequelize, DataTypes) => {
       },
       branch_ifsc_code: {
         type: DataTypes.STRING(20),
-        allowNull: false,
+        allowNull: true,
       },
       account_type: {
         type: DataTypes.STRING(20),
-        allowNull: false,
+        allowNull: true,
       },
       account_subtype: {
         type: DataTypes.STRING(20),
-        allowNull: false,
+        allowNull: true,
       },
       nominee_name: {
         type: DataTypes.STRING(50),
-        allowNull: false,
+        allowNull: true,
       },
       locker_request_desc: {
         type: DataTypes.TEXT,
