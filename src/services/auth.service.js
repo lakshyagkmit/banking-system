@@ -92,7 +92,7 @@ async function verifyEmail(email, otp) {
  * email is verified before allowing login.
  */
 async function login(email) {
-  const user = await User.findOne({ where: { email, is_verified: true } });
+  const user = await User.findOne({ where: { email, email_verified: true } });
   if (!user) {
     commonHelper.customError(`User with email ${email} does not exist`, 404);
   }
