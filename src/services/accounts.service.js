@@ -81,6 +81,13 @@ async function create(payload, user) {
       { transaction }
     );
 
+    await customer.update(
+      {
+        is_verified: true,
+      },
+      { transaction }
+    );
+
     await transaction.commit();
     return commonHelper.convertKeysToCamelCase(newAccount.dataValues);
   } catch (error) {

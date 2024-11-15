@@ -50,15 +50,8 @@ async function deleteById(req, res) {
     await branchService.deleteById(id);
     res.status(204).send({ message: 'Branch deleted successfully' });
   } catch (error) {
-    commonHelper.customErrorHandler(
-      req,
-      res,
-      error.message,
-      error.statusCode,
-      error
-    );
+    commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
   }
 }
-
 
 module.exports = { create, get, getById, updateById, deleteById };

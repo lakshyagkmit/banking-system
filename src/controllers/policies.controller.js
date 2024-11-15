@@ -14,8 +14,8 @@ async function create(req, res) {
 async function get(req, res) {
   try {
     const { query } = req;
-    const branches = await policyService.list(query);
-    res.status(200).json(branches);
+    const policies = await policyService.list(query);
+    res.status(200).json(policies);
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
   }
@@ -24,11 +24,11 @@ async function get(req, res) {
 async function getById(req, res) {
   try {
     const { id } = req.params;
-    const branch = await policyService.listById(id);
-    if (!branch) {
+    const policy = await policyService.listById(id);
+    if (!policy) {
       return res.status(404).json({ error: 'Branch not found' });
     }
-    res.status(200).json(branch);
+    res.status(200).json(policy);
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
   }
