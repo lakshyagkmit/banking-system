@@ -1,4 +1,5 @@
 const { Account, Branch, Application, UserLocker, sequelize } = require('../models');
+const { Op } = require('sequelize');
 const commonHelper = require('../helpers/commonFunctions.helper');
 
 // request for creation of new account in the bank
@@ -90,4 +91,65 @@ async function requestLocker(payload, user) {
   }
 }
 
-module.exports = { requestAccount, requestLocker };
+// List applications
+async function list(query) {
+  const { page, limit, requesType } = query;
+
+  const offset = (page - 1) * limit;
+
+  let applications;
+  if (requesType === 'accounts') {
+    applications = await Application.findAndCountAll({
+      where: {
+        branch_ifsc_code: {
+          [Op.ne]: null,
+        },
+      },
+      offset: offset,
+      limit: limit,
+      attributes: {
+        exclude: ['locker_request_desc'],
+      },
+    });
+  } else if (requesType === 'lockers') {
+    applications = await Application.findAndCountAll({
+      where: {
+        branch_ifsc_code: null,
+      },
+      offset: offset,
+      limit: limit,
+      attributes: {
+        exclude: ['account_type', 'account_subtype', 'branch_ifsc_code', 'nominee_name'],
+      },
+    });
+  } else {
+    applications = await Application.findAndCountAll({
+      offset: offset,
+      limit: limit,
+    });
+  }
+
+  if (!applications.rows.length) {
+    commonHelper.customError('No applications found', 404);
+  }
+
+  return {
+    totalItems: applications.count,
+    totalPages: Math.ceil(applications.count / limit),
+    currentPage: page,
+    data: applications.rows,
+  };
+}
+
+// Get an application by id
+async function listById(params) {
+  const { id } = params;
+
+  const application = await Application.findOne({
+    where: { id },
+  });
+
+  return application;
+}
+
+module.exports = { requestAccount, requestLocker, list, listById };
