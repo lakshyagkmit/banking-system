@@ -20,7 +20,7 @@ router.get(
   '/',
   authMiddleware.checkAuthToken,
   authMiddleware.authorizeRole(constants.ROLES['101']),
-  commonValidator.limitPageSchema,
+  commonValidator.querySchema,
   policyController.get
 );
 

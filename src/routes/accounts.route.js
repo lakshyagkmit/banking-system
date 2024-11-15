@@ -17,7 +17,7 @@ router.post(
   accountController.create
 );
 
-router.get('/', authMiddleware.checkAuthToken, commonValidator.limitPageSchema, accountController.get);
+router.get('/', authMiddleware.checkAuthToken, commonValidator.querySchema, accountController.get);
 
 router.get('/:id', authMiddleware.checkAuthToken, commonValidator.idSchema, accountController.getById);
 

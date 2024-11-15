@@ -22,19 +22,19 @@ module.exports = {
       },
       branch_ifsc_code: {
         type: Sequelize.STRING(20),
-        allowNull: false,
+        allowNull: true,
       },
       account_type: {
         type: Sequelize.STRING(20),
-        allowNull: false,
+        allowNull: true,
       },
       account_subtype: {
         type: Sequelize.STRING(20),
-        allowNull: false,
+        allowNull: true,
       },
       nominee_name: {
         type: Sequelize.STRING(50),
-        allowNull: false,
+        allowNull: true,
       },
       created_at: {
         allowNull: false,
