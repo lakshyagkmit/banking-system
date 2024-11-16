@@ -4,7 +4,6 @@ const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class UserLocker extends Model {
     static associate(models) {
-      // Associations to User and Locker models
       UserLocker.belongsTo(models.User, {
         foreignKey: 'user_id',
       });
@@ -37,7 +36,7 @@ module.exports = (sequelize, DataTypes) => {
     {
       sequelize,
       modelName: 'UserLocker',
-      tableName: 'userlockers',
+      tableName: 'users_lockers',
       underscored: true,
       timestamps: true,
       paranoid: true,
