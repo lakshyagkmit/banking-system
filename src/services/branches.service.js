@@ -51,6 +51,7 @@ async function create(payload) {
         ifsc_code: ifscCode,
         contact,
         total_lockers: totalLockers,
+        available_lockers: totalLockers,
       },
       { transaction }
     );
