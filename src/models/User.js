@@ -9,6 +9,12 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'user_id',
         otherKey: 'role_id',
       });
+
+      User.belongsToMany(models.Locker, {
+        through: models.UserLocker,
+        foreignKey: 'user_id',
+        otherKey: 'locker_id',
+      });
     }
   }
 

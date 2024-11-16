@@ -4,9 +4,14 @@ const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class Locker extends Model {
     static associate(models) {
-      // Define association to Branch
       Locker.belongsTo(models.Branch, {
         foreignKey: 'branch_id',
+      });
+
+      Locker.belongsToMany(models.User, {
+        through: models.UserLocker,
+        foreignKey: 'locker_id',
+        otherKey: 'user_id',
       });
     }
   }
