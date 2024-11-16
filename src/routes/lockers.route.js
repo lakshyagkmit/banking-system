@@ -39,4 +39,21 @@ router.get(
   lockerController.getById
 );
 
+router.patch(
+  '/:id',
+  authMiddleware.checkAuthToken,
+  authMiddleware.authorizeRole(constants.ROLES['102']),
+  commonValidator.idSchema,
+  lockerValidator.updateLockerSchema,
+  lockerController.updateById
+);
+
+router.delete(
+  '/:id',
+  authMiddleware.checkAuthToken,
+  authMiddleware.authorizeRole(constants.ROLES['102']),
+  commonValidator.idSchema,
+  lockerController.deleteById
+);
+
 module.exports = router;

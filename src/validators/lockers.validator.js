@@ -21,4 +21,13 @@ async function createLockerSchema(req, res, next) {
   validateHelper.validateRequest(req, res, next, schema, 'body');
 }
 
-module.exports = { lockerAssignSchema, createLockerSchema };
+//update locker validator
+async function updateLockerSchema(req, res, next) {
+  const schema = Joi.object({
+    monthlyCharge: Joi.number().required(),
+  });
+
+  validateHelper.validateRequest(req, res, next, schema, 'body');
+}
+
+module.exports = { lockerAssignSchema, createLockerSchema, updateLockerSchema };

@@ -42,4 +42,26 @@ async function getById(req, res) {
   }
 }
 
-module.exports = { assign, create, get, getById };
+async function updateById(req, res) {
+  try {
+    const { id } = req.params;
+    const { body, user } = req;
+    const locker = await lockerService.updateById(id, body, user);
+    res.status(200).json(locker);
+  } catch (error) {
+    commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
+  }
+}
+
+async function deleteById(req, res) {
+  try {
+    const { id } = req.params;
+    const { user } = req;
+    await lockerService.deleteById(id, user);
+    res.status(200).json({ message: 'Locker Deallocated successfully' });
+  } catch (error) {
+    commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
+  }
+}
+
+module.exports = { assign, create, get, getById, updateById, deleteById };

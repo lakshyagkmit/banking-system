@@ -183,4 +183,93 @@ async function listById(id, user) {
   return locker;
 }
 
-module.exports = { assign, create, list, listById };
+// update a locker
+async function updateById(id, payload, user) {
+  const transaction = await sequelize.transaction();
+
+  try {
+    const branchManagerId = user.id;
+
+    const branch = await Branch.findOne({
+      where: { user_id: branchManagerId },
+    });
+
+    if (!branch) {
+      throw commonHelper.customError('Branch not found', 404);
+    }
+
+    const locker = await Locker.findOne({
+      where: {
+        id,
+        branch_id: branch.id,
+      },
+    });
+
+    if (!locker) {
+      throw commonHelper.customError('Locker not found', 404);
+    }
+
+    const data = commonHelper.convertKeysToSnakeCase(payload);
+
+    await locker.update(data, { transaction });
+
+    await transaction.commit();
+
+    return { message: 'Locker updated successfully' };
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+}
+
+// deallocate a locker from customer
+async function deleteById(id, user) {
+  const transaction = await sequelize.transaction();
+
+  try {
+    const branchManagerId = user.id;
+
+    const branch = await Branch.findOne({
+      where: { user_id: branchManagerId },
+    });
+
+    if (!branch) {
+      throw commonHelper.customError('Branch not found', 404);
+    }
+
+    const locker = await Locker.findOne({
+      where: {
+        id,
+        branch_id: branch.id,
+      },
+    });
+
+    if (!locker) {
+      throw commonHelper.customError('Locker not found', 404);
+    }
+
+    const userLocker = await UserLocker.findOne({
+      where: {
+        locker_id: locker.id,
+        status: 'active',
+      },
+      transaction,
+    });
+
+    if (!userLocker || locker.status === 'available') {
+      throw commonHelper.customError('Locker is not currently assigned', 400);
+    }
+
+    await locker.update({ status: 'available' }, { transaction });
+    await userLocker.update({ status: 'inactive' }, { transaction });
+
+    await transaction.commit();
+
+    return { message: 'Locker deallocated successfully' };
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+}
+
+module.exports = { assign, create, list, listById, updateById, deleteById };
