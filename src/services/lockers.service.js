@@ -118,10 +118,69 @@ async function create(payload, user) {
     });
   }
 
-  console.log(lockers);
-
   await Locker.bulkCreate(lockers);
   return { message: `${numberOfLockers} lockers added successfully` };
 }
 
-module.exports = { assign, create };
+// list lockers based on role
+async function list(query, user) {
+  const { page, limit } = query;
+  const { id, role } = user;
+
+  const offset = (page - 1) * limit;
+
+  let lockers;
+  if (role === constants.ROLES['103']) {
+    lockers = await Locker.findAndCountAll({
+      include: {
+        model: User,
+        where: { id },
+        attributes: [],
+      },
+      offset: offset,
+      limit: limit,
+    });
+  } else {
+    const branch = await Branch.findOne({ where: { user_id: id } });
+    lockers = await Locker.findAndCountAll({
+      where: {
+        branch_id: branch.id,
+      },
+      offset: offset,
+      limit: limit,
+    });
+  }
+
+  if (!lockers.rows.length) {
+    commonHelper.customError('No lockers found', 404);
+  }
+
+  return {
+    totalItems: lockers.count,
+    totalPages: Math.ceil(lockers.count / limit),
+    currentPage: page,
+    data: lockers.rows,
+  };
+}
+
+// list a locker by id
+async function listById(id, user) {
+  const branchManagerId = user.id;
+
+  const branch = await Branch.findOne({ where: { user_id: branchManagerId } });
+
+  const locker = await Locker.findOne({
+    where: {
+      id,
+      branch_id: branch.id,
+    },
+  });
+
+  if (!locker) {
+    commonHelper.customError('Locker not found', 404);
+  }
+
+  return locker;
+}
+
+module.exports = { assign, create, list, listById };
