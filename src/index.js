@@ -11,6 +11,7 @@ const dbConnect = async function () {
   try {
     await sequelize.authenticate();
     console.log('Database connected Successfully');
+    require('./schedulers/deposits.scheduler');
   } catch (err) {
     console.log('Error generated while connected to database', err);
   }
