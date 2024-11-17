@@ -5,7 +5,7 @@ const ACCOUNT_TYPES = Object.freeze({
   SAVINGS: 'savings',
   CURRENT: 'current',
   FIXED: 'fixed',
-  DEPOSIT: 'deposit',
+  RECURRING: 'recurring',
 });
 
 // Constants for roles

@@ -39,7 +39,7 @@ module.exports = {
         },
       },
       type: {
-        type: Sequelize.ENUM('savings', 'current', 'fixed', 'deposit'),
+        type: Sequelize.ENUM('savings', 'current', 'fixed', 'recurring'),
         allowNull: false,
       },
       subtype: {
