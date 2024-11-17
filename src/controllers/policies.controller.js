@@ -4,8 +4,8 @@ const commonHelper = require('../helpers/commonFunctions.helper');
 async function create(req, res) {
   try {
     const { body } = req;
-    const newPolicy = await policyService.create(body);
-    res.status(201).json(newPolicy);
+    const policy = await policyService.create(body);
+    res.status(201).json(policy);
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
   }

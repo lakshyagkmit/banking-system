@@ -11,7 +11,7 @@ async function create(req, res) {
   }
 }
 
-const get = async (req, res, next) => {
+const get = async (req, res) => {
   try {
     const { accountId } = req.params;
     const { query, user } = req;
@@ -26,7 +26,7 @@ const get = async (req, res, next) => {
   }
 };
 
-const getById = async (req, res, next) => {
+const getById = async (req, res) => {
   try {
     const { accountId, transactionId } = req.params;
     const { user } = req;
@@ -38,7 +38,6 @@ const getById = async (req, res, next) => {
     });
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
-    next(error);
   }
 };
 

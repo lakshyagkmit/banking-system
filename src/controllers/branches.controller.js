@@ -4,8 +4,8 @@ const commonHelper = require('../helpers/commonFunctions.helper');
 async function create(req, res) {
   try {
     const { body } = req;
-    const newBranch = await branchService.create(body);
-    res.status(201).json(newBranch);
+    const branch = await branchService.create(body);
+    res.status(201).json(branch);
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
   }
@@ -38,7 +38,7 @@ async function updateById(req, res) {
   try {
     const { params, body } = req;
     const branch = await branchService.updateById(params.id, body);
-    res.status(200).json({ branch, message: 'User updated successfully' });
+    res.status(200).json({ branch, message: 'Branch updated successfully' });
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
   }
