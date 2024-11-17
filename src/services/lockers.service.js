@@ -1,6 +1,7 @@
 const { Application, Branch, Locker, User, Role, UserLocker, sequelize } = require('../models');
 const { Op } = require('sequelize');
 const commonHelper = require('../helpers/commonFunctions.helper');
+const notificationHelper = require('../helpers/notifications.helper');
 const constants = require('../constants/constants');
 
 // assign a locker to customer based on availability
@@ -60,6 +61,7 @@ async function assign(payload, user) {
     const userLocker = await UserLocker.findOne({
       where: {
         user_id: customer.id,
+        status: 'active',
       },
     });
 
@@ -83,6 +85,8 @@ async function assign(payload, user) {
     await application.destroy({ transaction });
 
     await transaction.commit();
+
+    await notificationHelper.lockerAssignedNotification(email, lockerSerialNo);
 
     return { message: 'Locker assigned successfully' };
   } catch (error) {

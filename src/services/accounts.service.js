@@ -1,6 +1,7 @@
-const { User, Role, Account, Branch, Policy, sequelize } = require('../models');
+const { User, Role, Account, Branch, Policy, Application, sequelize } = require('../models');
 const commonHelper = require('../helpers/commonFunctions.helper');
 const accountHelper = require('../helpers/accounts.helper');
+const notificationHelper = require('../helpers/notifications.helper');
 const constants = require('../constants/constants');
 
 // Create a  new account for customer based on his application
@@ -28,6 +29,18 @@ async function create(payload, user) {
 
     if (!branch) {
       commonHelper.customError('No branch Found.', 404);
+    }
+
+    const application = await Application.findOne({
+      where: {
+        user_id: customer.id,
+        branch_ifsc_code: branch.ifsc_code,
+        locker_request_desc: null,
+      },
+    });
+
+    if (!application) {
+      commonHelper.customError('No application found, cannot assign a locker to this user', 409);
     }
 
     const branchId = branch.id;
@@ -88,8 +101,10 @@ async function create(payload, user) {
       { transaction }
     );
 
+    await notificationHelper.accountCreationNotification(customer.email, type, accountNumber);
+
     await transaction.commit();
-    return commonHelper.convertKeysToCamelCase(newAccount.dataValues);
+    return newAccount;
   } catch (error) {
     await transaction.rollback();
     throw error;
@@ -130,13 +145,11 @@ async function list(query, user) {
     commonHelper.customError('No accounts found', 404);
   }
 
-  const accountsData = accounts.rows.map(account => commonHelper.convertKeysToCamelCase(account.dataValues));
-
   return {
     totalItems: accounts.count,
     totalPages: Math.ceil(accounts.count / limit),
     currentPage: page,
-    data: accountsData,
+    data: accounts.rows,
   };
 }
 
@@ -190,7 +203,7 @@ async function listById(params, user) {
     });
   }
 
-  return commonHelper.convertKeysToCamelCase(account.dataValues);
+  return account;
 }
 
 // Update account details by id
@@ -221,7 +234,7 @@ async function updateById(params, payload, user) {
     const updatedAccount = await account.update(data, { transaction });
     await transaction.commit();
 
-    return commonHelper.convertKeysToCamelCase(updatedAccount.dataValues);
+    return updatedAccount;
   } catch (error) {
     await transaction.rollback();
     throw error;
