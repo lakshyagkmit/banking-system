@@ -1,6 +1,6 @@
 const Joi = require('joi');
 const validateHelper = require('../helpers/validates.helper');
-const constants = require('..contants/constants');
+const constants = require('../constants/constants');
 
 //create transaction validator
 async function transactionSchema(req, res, next) {

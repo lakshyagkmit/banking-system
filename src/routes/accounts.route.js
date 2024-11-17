@@ -49,4 +49,20 @@ router.post(
   transactionController.create
 );
 
+router.post(
+  '/:accountId/transactions',
+  authMiddleware.checkAuthToken,
+  authMiddleware.authorizeRole([constants.ROLES['102'], constants.ROLES['103']]),
+  commonValidator.querySchema,
+  transactionController.get
+);
+
+router.post(
+  '/:accountId/transactions/:transactionId',
+  authMiddleware.checkAuthToken,
+  authMiddleware.authorizeRole([constants.ROLES['102'], constants.ROLES['103']]),
+  commonValidator.idSchema,
+  transactionController.getById
+);
+
 module.exports = router;

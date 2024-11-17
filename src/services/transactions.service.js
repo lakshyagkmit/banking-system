@@ -1,4 +1,4 @@
-const { Transaction, Account, sequelize } = require('../models');
+const { Transaction, Account, Branch, sequelize } = require('../models');
 const commonHelper = require('../helpers/commonFunctions.helper');
 const constants = require('../constants/constants');
 
@@ -145,4 +145,92 @@ async function create(params, payload) {
   }
 }
 
-module.exports = { create };
+const list = async (accountId, query, user) => {
+  const { page, limit } = query;
+  const { id, role } = user;
+
+  const account = await Account.findByPk(accountId);
+
+  if (!account) {
+    throw commonHelper.customError('Account not found', 404);
+  }
+
+  const offset = (page - 1) * limit;
+
+  let transactions;
+  if (role === constants.ROLES['102']) {
+    const branch = await Branch.findOne({
+      where: { user_id: id },
+    });
+
+    if (branch.id !== account.branch_id) {
+      throw commonHelper.customError("Cannot access other account's branch transaction history", 403);
+    }
+
+    transactions = await Transaction.findAndCountAll({
+      where: { account_id: accountId },
+      offset: offset,
+      limit: limit,
+    });
+  } else if (role === constants.ROLES['103'] && account.user_id === id) {
+    transactions = await Transaction.findAndCountAll({
+      where: { account_id: accountId },
+      offset: offset,
+      limit: limit,
+    });
+  }
+
+  if (!transactions.rows.length) {
+    commonHelper.customError('No transactions found', 404);
+  }
+
+  return {
+    totalItems: transactions.count,
+    totalPages: Math.ceil(transactions.count / limit),
+    currentPage: page,
+    data: transactions.rows,
+  };
+};
+
+const listById = async (accountId, transactionId, user) => {
+  const { id, role } = user;
+
+  const account = await Account.findByPk(accountId);
+
+  if (!account) {
+    throw commonHelper.customError('Account not found', 404);
+  }
+
+  let transaction;
+  if (role === constants.ROLES['102']) {
+    const branch = await Branch.findOne({
+      where: { user_id: id },
+    });
+
+    if (branch.id !== account.branch_id) {
+      throw commonHelper.customError("Cannot access other account's branch transaction history", 403);
+    }
+
+    transaction = await Transaction.findOne({
+      where: {
+        id: transactionId,
+        account_id: accountId,
+      },
+    });
+  } else if (role === constants.ROLES['103'] && account.user_id === id) {
+    transaction = await Transaction.findOne({
+      where: {
+        id: transactionId,
+        account_id: accountId,
+      },
+    });
+  }
+
+  if (!transaction) {
+    throw commonHelper.customError('Transaction not found', 404);
+  }
+
+  return transaction;
+};
+
+module.exports = { create, list, listById };
