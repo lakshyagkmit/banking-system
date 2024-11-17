@@ -3,6 +3,8 @@ const authMiddleware = require('../middlewares/auth.middleware');
 const commonValidator = require('../validators/commons.validator');
 const accountValidator = require('../validators/accounts.validator');
 const accountController = require('../controllers/accounts.controller');
+const transactionValidator = require('../validators/transactions.validator');
+const transactionController = require('../controllers/transactions.controller');
 const constants = require('../constants/constants');
 
 const router = express.Router();
@@ -36,6 +38,15 @@ router.delete(
   authMiddleware.authorizeRole(constants.ROLES['102']),
   commonValidator.idSchema,
   accountController.deleteById
+);
+
+// Transactions Routes
+router.post(
+  '/:accountId/transactions',
+  authMiddleware.checkAuthToken,
+  authMiddleware.authorizeRole(constants.ROLES['103']),
+  transactionValidator.transactionSchema,
+  transactionController.create
 );
 
 module.exports = router;
