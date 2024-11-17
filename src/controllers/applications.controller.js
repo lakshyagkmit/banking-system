@@ -4,8 +4,8 @@ const commonHelper = require('../helpers/commonFunctions.helper');
 async function requestAccount(req, res) {
   try {
     const { body, user } = req;
-    const newApplication = await applicationService.requestAccount(body, user);
-    res.status(201).json(newApplication);
+    const application = await applicationService.requestAccount(body, user);
+    res.status(201).json(application);
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
   }
@@ -14,8 +14,8 @@ async function requestAccount(req, res) {
 async function requestLocker(req, res) {
   try {
     const { body, user } = req;
-    const newApplication = await applicationService.requestLocker(body, user);
-    res.status(201).json(newApplication);
+    const application = await applicationService.requestLocker(body, user);
+    res.status(201).json(application);
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
   }
@@ -23,8 +23,8 @@ async function requestLocker(req, res) {
 
 async function get(req, res) {
   try {
-    const { query } = req;
-    const applications = await applicationService.list(query);
+    const { query, user } = req;
+    const applications = await applicationService.list(query, user);
     res.status(200).json(applications);
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
@@ -33,8 +33,8 @@ async function get(req, res) {
 
 async function getById(req, res) {
   try {
-    const { params } = req;
-    const application = await applicationService.listById(params);
+    const { params, user } = req;
+    const application = await applicationService.listById(params, user);
     if (!application) {
       return res.status(404).json({ message: 'Application not found' });
     }
