@@ -24,8 +24,25 @@ const GOV_ISSUE_ID_TYPES = Object.freeze({
   VOTER_ID: 'voter_id',
 });
 
+const TRANSACTION_TYPES = Object.freeze({
+  WITHDRAWL: 'withdrawal',
+  DEPOSIT: 'deposit',
+  TRANSFER: 'transfer',
+});
+
+const PAYMENT_METHODS = Object.freeze({
+  CREDIT_CARD: 'Credit Card',
+  DEBIT_CARD: 'Debit Card',
+  NEFT: 'NEFT',
+  RTGS: 'RTGS',
+  IMPS: 'IMPS',
+  UPI: 'UPI',
+});
+
 module.exports = {
   ACCOUNT_TYPES,
   ROLES,
   GOV_ISSUE_ID_TYPES,
+  TRANSACTION_TYPES,
+  PAYMENT_METHODS,
 };
