@@ -1,11 +1,12 @@
 const Joi = require('joi');
 const validateHelper = require('../helpers/validates.helper');
+const constants = require('../constants/constants');
 
 // create policy validator
 async function createPolicySchema(req, res, next) {
   const schema = Joi.object({
     accountType: Joi.string()
-      .valid('savings', 'current', 'fixed', 'recurring')
+      .valid(...Object.values(constants.ACCOUNT_TYPES))
       .required()
       .label('Account Type'),
     accountSubtype: Joi.string().max(50).required().label('Account Subtype'),
@@ -22,7 +23,7 @@ async function createPolicySchema(req, res, next) {
 async function updatePolicySchema(req, res, next) {
   const schema = Joi.object({
     accountType: Joi.string()
-      .valid('savings', 'current', 'fixed', 'recurring')
+      .valid(...Object.values(constants.ACCOUNT_TYPES))
       .optional()
       .label('Account Type'),
     accountSubtype: Joi.string().max(50).optional().label('Account Subtype'),

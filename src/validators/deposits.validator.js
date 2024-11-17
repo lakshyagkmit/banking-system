@@ -8,6 +8,8 @@ async function depositsCreateSchema(req, res, next) {
     type: Joi.string().valid(constants.ACCOUNT_TYPES.FIXED, constants.ACCOUNT_TYPES.RECURRING).required(),
     subtype: Joi.string().max(50).optional(),
     nominee: Joi.string().max(50).required(),
+    installmentAmount: Joi.number().precision(2).optional(),
+    principleAmount: Joi.number().precision(2).optional(),
   });
 
   validateHelper.validateRequest(req, res, next, schema, 'body');
