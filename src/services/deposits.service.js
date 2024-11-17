@@ -1,6 +1,7 @@
-const { Account, Branch, Policy, sequelize } = require('../models');
+const { User, Account, Branch, Policy, sequelize } = require('../models');
 const commonHelper = require('../helpers/commonFunctions.helper');
 const accountHelper = require('../helpers/accounts.helper');
+const notificationHelper = require('../helpers/notifications.helper');
 const constants = require('../constants/constants');
 
 // Create a  new deposit account
@@ -8,8 +9,18 @@ async function create(payload, user) {
   const transaction = await sequelize.transaction();
 
   try {
-    const { type, subtype, nominee } = payload;
+    const { type, subtype, nominee, installmentAmount, principleAmount } = payload;
     const { id } = user;
+
+    if (type === constants.ACCOUNT_TYPES.FIXED && !principleAmount) {
+      commonHelper.customError('Please add principle amount to proceed further', 400);
+    }
+
+    if (type === constants.ACCOUNT_TYPES.RECURRING && !installmentAmount) {
+      commonHelper.customError('Please add installment amount to proceed further', 400);
+    }
+
+    const customer = await User.findByPk(id);
 
     const account = await Account.findOne({ where: { user_id: id, status: 'active' } });
     if (!account) {
@@ -37,10 +48,14 @@ async function create(payload, user) {
       commonHelper.customError('Policy minimum amount is not defined.', 409);
     }
 
+    if (installmentAmount < policy.minimum_amount || principleAmount < policy.minimum_amount) {
+      commonHelper.customError('Provided amount is less than defined minimum amount.', 409);
+    }
+
     const accountNumber = accountHelper.generateAccountNumber();
     const existingAccount = await Account.findOne({ where: { number: accountNumber } });
     if (existingAccount) {
-      commonHelper.customError('Generated account number already exists. Please retry.', 500);
+      commonHelper.customError('Generated account number already exists. Please retry.', 409);
     }
 
     const lockInPeriodMonths = policy.lock_in_period;
@@ -58,8 +73,10 @@ async function create(payload, user) {
         balance: 0,
         interest_rate: policy.interest_rate,
         nominee,
-        installment_amount: type === constants.ACCOUNT_TYPES.RECURRING ? policy.minimum_amount : null,
-        principle_amount: type === constants.ACCOUNT_TYPES.FIXED ? policy.minimum_amount : null,
+        installment_amount:
+          type === constants.ACCOUNT_TYPES.RECURRING ? parseFloat(installmentAmount).toFixed(2) : null,
+        principle_amount:
+          type === constants.ACCOUNT_TYPES.FIXED ? parseFloat(principleAmount).toFixed(2) : null,
         maturity_date: maturityDate,
       },
       { transaction }
@@ -67,6 +84,7 @@ async function create(payload, user) {
 
     await transaction.commit();
 
+    await notificationHelper.accountCreationNotification(customer.email, type, accountNumber);
     return deposit;
   } catch (error) {
     await transaction.rollback();

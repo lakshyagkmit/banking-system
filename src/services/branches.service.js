@@ -56,7 +56,7 @@ async function create(payload) {
       { transaction }
     );
     await transaction.commit();
-    return commonHelper.convertKeysToCamelCase(newBranch.dataValues);
+    return newBranch;
   } catch (error) {
     await transaction.rollback();
     throw error;
@@ -77,10 +77,8 @@ async function list(query) {
     commonHelper.customError('No branches found', 404);
   }
 
-  const branchesData = branches.rows.map(branch => commonHelper.convertKeysToCamelCase(branch.dataValues));
-
   return {
-    branches: branchesData,
+    branches: branches.rows,
     totalBranches: branches.count,
     currentPage: page,
     totalPages: Math.ceil(branches.count / limit),
@@ -90,7 +88,7 @@ async function list(query) {
 // get a branch by id
 async function listById(id) {
   const branch = await Branch.findByPk(id);
-  return commonHelper.convertKeysToCamelCase(branch.dataValues);
+  return branch;
 }
 
 // update a branch by id
@@ -102,11 +100,22 @@ async function updateById(id, payload) {
       commonHelper.customError('Branch not found', 404);
     }
 
+    if (payload.totalLockers) {
+      const availableLockers = payload.totalLockers - branch.total_lockers + branch.available_lockers;
+      await branch.update(
+        {
+          available_lockers: availableLockers,
+        },
+        { transaction }
+      );
+    }
+
     const data = commonHelper.convertKeysToSnakeCase(payload);
 
     const updatedBranch = await branch.update(data, { transaction });
+
     await transaction.commit();
-    return commonHelper.convertKeysToCamelCase(updatedBranch.dataValues);
+    return updatedBranch;
   } catch (error) {
     await transaction.rollback();
     throw error;

@@ -37,7 +37,7 @@ async function create(payload) {
       { transaction }
     );
     await transaction.commit();
-    return commonHelper.convertKeysToCamelCase(newPolicy.dataValues);
+    return newPolicy;
   } catch (error) {
     await transaction.rollback();
     throw error;
@@ -58,10 +58,8 @@ async function list(query) {
     commonHelper.customError('No policies found', 404);
   }
 
-  const policiesData = policies.rows.map(policy => commonHelper.convertKeysToCamelCase(policy.dataValues));
-
   return {
-    policies: policiesData,
+    policies: policies.rows,
     totalPolicies: policies.count,
     currentPage: page,
     totalPages: Math.ceil(policies.count / limit),
@@ -71,7 +69,7 @@ async function list(query) {
 // get a policy by id
 async function listById(id) {
   const policy = await Policy.findByPk(id);
-  return commonHelper.convertKeysToCamelCase(policy.dataValues);
+  return policy;
 }
 
 // update a policy by id
@@ -87,7 +85,7 @@ async function updateById(id, payload) {
 
     const updatedPolicy = await policy.update(data, { transaction });
     await transaction.commit();
-    return commonHelper.convertKeysToCamelCase(updatedPolicy.dataValues);
+    return updatedPolicy;
   } catch (error) {
     await transaction.rollback();
     throw error;

@@ -35,6 +35,10 @@ async function create(payload, file, user) {
       commonHelper.customError(`User with ${field} exists, please use another ${field}`, 409);
     }
 
+    if (!file) {
+      commonHelper.customError(`Please add gov_issue_id_image`, 409);
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
     const govIssueIdImageUrl = await awsHelper.uploadImageToS3(file);
 
@@ -68,7 +72,7 @@ async function create(payload, file, user) {
     );
 
     await transaction.commit();
-    return commonHelper.convertKeysToCamelCase(newUser.dataValues);
+    return newUser;
   } catch (error) {
     await transaction.rollback();
     throw error;
@@ -109,13 +113,11 @@ async function list(query, user) {
     commonHelper.customError('No users found', 404);
   }
 
-  const usersData = users.rows.map(user => commonHelper.convertKeysToCamelCase(user.dataValues));
-
   return {
     totalItems: users.count,
     totalPages: Math.ceil(users.count / limit),
     currentPage: page,
-    data: usersData,
+    data: users.rows,
   };
 }
 
@@ -142,7 +144,7 @@ async function listById(params, user) {
     },
   });
 
-  return commonHelper.convertKeysToCamelCase(users.dataValues);
+  return users;
 }
 
 // Update a user by ID with role-based access control
@@ -176,7 +178,7 @@ async function updateById(params, payload, user) {
 
       const updatedUser = await userToUpdate.update(data, { transaction });
       await transaction.commit();
-      return commonHelper.convertKeysToCamelCase(updatedUser.dataValues);
+      return updatedUser;
     }
   } catch (error) {
     await transaction.rollback();

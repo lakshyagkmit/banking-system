@@ -26,6 +26,10 @@ async function register(payload, file) {
       commonHelper.customError(`User with ${field} exists, please use another ${field}`, 409);
     }
 
+    if (!file) {
+      commonHelper.customError(`Please add gov_issue_id_image`, 409);
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
     const govIssueIdImageUrl = await awsHelper.uploadImageToS3(file);
 
