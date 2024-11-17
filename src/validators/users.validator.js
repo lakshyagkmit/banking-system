@@ -10,7 +10,7 @@ async function createUserSchema(req, res, next) {
     contact: Joi.string()
       .pattern(/^\d{10}$/)
       .required(),
-    govIssueIdType: Joi.string().valid('passport', 'adhar', 'pan', 'voter_id', "driver's license"),
+    govIssueIdType: Joi.string().valid(...Object.values(constants.GOV_ISSUE_ID_TYPES)),
     fatherName: Joi.string().max(50),
     motherName: Joi.string().max(50),
     address: Joi.string(),

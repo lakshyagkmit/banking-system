@@ -5,7 +5,7 @@ const process = require('process');
 async function uploadImageToS3(file) {
   const params = {
     Bucket: process.env.AWS_S3_BUCKET,
-    Key: `${Date.now()}_${file.originalname}`,
+    Key: `${Date.now()}_BANK`,
     Body: file.buffer,
     ContentType: file.mimetype,
   };
