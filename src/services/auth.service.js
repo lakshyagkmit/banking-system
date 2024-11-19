@@ -23,11 +23,11 @@ async function register(payload, file) {
 
     if (existingUser) {
       const field = existingUser.email === email ? 'email' : 'contact';
-      commonHelper.customError(`User with ${field} exists, please use another ${field}`, 409);
+      return commonHelper.customError(`User with ${field} exists, please use another ${field}`, 409);
     }
 
     if (!file) {
-      commonHelper.customError(`Please add gov_issue_id_image`, 409);
+      return commonHelper.customError(`Please add gov_issue_id_image`, 409);
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -60,10 +60,10 @@ async function register(payload, file) {
       { transaction }
     );
 
-    await transaction.commit();
     await notificationHelper.sendOtp(email);
+    await transaction.commit();
 
-    return commonHelper.convertKeysToCamelCase(newUser.dataValues);
+    return newUser;
   } catch (error) {
     await transaction.rollback();
     throw error;
@@ -84,7 +84,7 @@ async function verifyEmail(email, otp) {
   });
 
   await user.update({
-    email_verified: true,
+    is_verified: true,
   });
 
   otpHelper.deleteOtp(email);
