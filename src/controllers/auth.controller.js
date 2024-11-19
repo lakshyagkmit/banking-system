@@ -1,58 +1,69 @@
 const authService = require('../services/auth.service');
 const commonHelper = require('../helpers/commonFunctions.helper');
 
-async function register(req, res) {
+async function register(req, res, next) {
   try {
     const { body, file } = req;
-    const newUser = await authService.register(body, file);
-    res.status(201).json(newUser);
+    res.data = await authService.register(body, file);
+    res.statusCode = 201;
+    next();
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
   }
 }
 
-async function verifyEmail(req, res) {
+async function verifyEmail(req, res, next) {
   try {
     const { email, otp } = req.body;
     await authService.verifyEmail(email, otp);
-    res.status(200).json({ message: 'Email Verified Successfully' });
+    res.message = 'Email Verified Successfully';
+    res.statusCode = 200;
+    next();
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
   }
 }
 
-async function login(req, res) {
+async function login(req, res, next) {
   try {
     const { email } = req.body;
     await authService.login(email);
-    res.status(200).json({ message: 'OTP Sent on email' });
+    res.message = 'OTP Sent on email';
+    res.statusCode = 200;
+    next();
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
   }
 }
 
-async function verifyOtp(req, res) {
+async function verifyOtp(req, res, next) {
   try {
     const { email, otp } = req.body;
-    const token = await authService.verifyOtp(email, otp);
-    res.status(200).json({ message: 'Logged in', token });
+    res.token = await authService.verifyOtp(email, otp);
+    res.message = 'OTP Sent on email';
+    res.statusCode = 200;
+    next();
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
   }
 }
 
-async function resendOtp(req, res) {
+async function resendOtp(req, res, next) {
   try {
     const { email } = req.body;
     await authService.resendOtp(email);
-    res.status(200).json({ message: 'OTP Resent to email' });
+    res.message = 'OTP Resent to email';
+    res.statusCode = 200;
+    next();
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
   }
 }
 
 async function logout(req, res) {
-  res.status(204).send({ message: 'User logged out successfully' });
+  res.message = 'User logged out successfully';
+  res.statusCode = 204;
+  next();
 }
 
 module.exports = { register, verifyEmail, login, verifyOtp, resendOtp, logout };
