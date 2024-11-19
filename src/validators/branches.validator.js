@@ -8,7 +8,6 @@ async function createSchema(req, res, next) {
       .trim()
       .guid({ version: ['uuidv4'] })
       .required(),
-    name: Joi.string().max(50).required(),
     address: Joi.string(),
     ifscCode: Joi.string().max(20).required(),
     contact: Joi.string().required(),
@@ -19,7 +18,6 @@ async function createSchema(req, res, next) {
 
 async function updateSchema(req, res, next) {
   const schema = Joi.object({
-    name: Joi.string().max(50).optional(),
     address: Joi.string().optional(),
     ifscCode: Joi.string().max(20).optional(),
     contact: Joi.string().optional(),

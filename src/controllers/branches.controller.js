@@ -1,57 +1,56 @@
 const branchService = require('../services/branches.service');
 const commonHelper = require('../helpers/commonFunctions.helper');
 
-async function create(req, res) {
+async function create(req, res, next) {
   try {
     const { body } = req;
-    const branch = await branchService.create(body);
-    res.status(201).json(branch);
+    res.data = await branchService.create(body);
+    res.statusCode = 201;
+    next();
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
   }
 }
 
-async function get(req, res) {
+async function index(req, res, next) {
   try {
     const { query } = req;
-    const branches = await branchService.list(query);
-    res.status(200).json(branches);
+    res.data = await branchService.index(query);
+    res.statusCode = 200;
+    next();
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
   }
 }
 
-async function getById(req, res) {
+async function view(req, res, next) {
   try {
     const { id } = req.params;
-    const branch = await branchService.listById(id);
+    const branch = await branchService.view(id);
     if (!branch) {
-      return res.status(404).json({ error: 'Branch not found' });
+      res.message = 'Branch not found';
+      res.statusCode = 404;
+      next();
     }
-    res.status(200).json(branch);
+    res.data = branch;
+    res.statusCode = 200;
+    next();
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
   }
 }
 
-async function updateById(req, res) {
+async function update(req, res, next) {
   try {
     const { params, body } = req;
-    const branch = await branchService.updateById(params.id, body);
-    res.status(200).json({ branch, message: 'Branch updated successfully' });
+    const { id } = params;
+    res.data = await branchService.update(id, body);
+    res.message = 'Branch updated successfully';
+    res.statusCode = 200;
+    next();
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
   }
 }
 
-async function deleteById(req, res) {
-  try {
-    const { id } = req.params;
-    await branchService.deleteById(id);
-    res.status(204).send({ message: 'Branch deleted successfully' });
-  } catch (error) {
-    commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
-  }
-}
-
-module.exports = { create, get, getById, updateById, deleteById };
+module.exports = { create, index, view, update };
