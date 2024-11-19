@@ -3,8 +3,10 @@ const authMiddleware = require('../middlewares/auth.middleware');
 const commonValidator = require('../validators/commons.validator');
 const accountValidator = require('../validators/accounts.validator');
 const accountController = require('../controllers/accounts.controller');
+const accountSerialize = require('../serializers/accounts.serializer');
 const transactionValidator = require('../validators/transactions.validator');
 const transactionController = require('../controllers/transactions.controller');
+const commonHelper = require('../helpers/commonFunctions.helper');
 const constants = require('../constants/constants');
 
 const router = express.Router();
@@ -15,21 +17,39 @@ router.post(
   '/',
   authMiddleware.checkAuthToken,
   authMiddleware.authorizeRole(constants.ROLES['102']),
-  accountValidator.accountsCreateSchema,
-  accountController.create
+  accountValidator.createSchema,
+  accountController.create,
+  accountSerialize.serialize,
+  commonHelper.sendResponse
 );
 
-router.get('/', authMiddleware.checkAuthToken, commonValidator.querySchema, accountController.get);
+router.get(
+  '/',
+  authMiddleware.checkAuthToken,
+  commonValidator.querySchema,
+  accountController.index,
+  accountSerialize.serialize,
+  commonHelper.sendResponse
+);
 
-router.get('/:id', authMiddleware.checkAuthToken, commonValidator.idSchema, accountController.getById);
+router.get(
+  '/:id',
+  authMiddleware.checkAuthToken,
+  commonValidator.idSchema,
+  accountController.view,
+  accountSerialize.serialize,
+  commonHelper.sendResponse
+);
 
 router.put(
   '/:id',
   authMiddleware.checkAuthToken,
   authMiddleware.authorizeRole(constants.ROLES['102']),
   commonValidator.idSchema,
-  accountValidator.accountsUpdateSchema,
-  accountController.updateById
+  accountValidator.updateSchema,
+  accountController.update,
+  accountSerialize.serialize,
+  commonHelper.sendResponse
 );
 
 router.delete(
@@ -37,7 +57,9 @@ router.delete(
   authMiddleware.checkAuthToken,
   authMiddleware.authorizeRole(constants.ROLES['102']),
   commonValidator.idSchema,
-  accountController.deleteById
+  accountController.remove,
+  accountSerialize.serialize,
+  commonHelper.sendResponse
 );
 
 // Transactions Routes
