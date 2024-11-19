@@ -2,6 +2,8 @@ const express = require('express');
 const authMiddleware = require('../middlewares/auth.middleware');
 const applicationValidator = require('../validators/applications.validator');
 const applicationController = require('../controllers/applications.controller');
+const applicationSerialize = require('../serializers/applications.serializer');
+const commonHelper = require('../helpers/commonFunctions.helper');
 const commonValidator = require('../validators/commons.validator');
 const constants = require('../constants/constants');
 
@@ -11,15 +13,19 @@ const router = express.Router();
 router.post(
   '/accounts',
   authMiddleware.checkAuthToken,
-  applicationValidator.accountsApplicationSchema,
-  applicationController.requestAccount
+  applicationValidator.accountSchema,
+  applicationController.requestAccount,
+  applicationSerialize.serialize,
+  commonHelper.sendResponse
 );
 
 router.post(
   '/lockers',
   authMiddleware.checkAuthToken,
-  applicationValidator.lockersApplicationSchema,
-  applicationController.requestLocker
+  applicationValidator.lockerSchema,
+  applicationController.requestLocker,
+  applicationSerialize.serialize,
+  commonHelper.sendResponse
 );
 
 router.get(
@@ -27,7 +33,9 @@ router.get(
   authMiddleware.checkAuthToken,
   authMiddleware.authorizeRole(constants.ROLES['102']),
   commonValidator.querySchema,
-  applicationController.get
+  applicationController.inde,
+  applicationSerialize.serialize,
+  commonHelper.sendResponse
 );
 
 router.get(
@@ -35,7 +43,9 @@ router.get(
   authMiddleware.checkAuthToken,
   authMiddleware.authorizeRole(constants.ROLES['102']),
   commonValidator.idSchema,
-  applicationController.getById
+  applicationController.view,
+  applicationSerialize.serialize,
+  commonHelper.sendResponse
 );
 
 module.exports = router;
