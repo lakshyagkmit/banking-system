@@ -20,13 +20,27 @@ async function customErrorHandler(req, res, message, statusCode = 400, error = n
   res.status(statusCode).json(response);
 }
 
-function customError(message, statusCode) {
+async function customError(message, statusCode) {
   const error = new Error(message);
   error.statusCode = statusCode;
   throw error;
 }
 
-function convertKeysToSnakeCase(obj) {
+async function sendResponse(req, res) {
+  const response = {
+    message: res.message || 'Success',
+  };
+
+  if (res.data) {
+    response.data = res.data;
+  } else if (res.token) {
+    response.token = res.token;
+  }
+
+  return res.status(res.statusCode || 200).json(response);
+}
+
+async function convertKeysToSnakeCase(obj) {
   if (Array.isArray(obj)) {
     return obj.map(v => convertKeysToSnakeCase(v));
   } else if (obj !== null && typeof obj === 'object') {
@@ -42,4 +56,5 @@ module.exports = {
   customErrorHandler,
   customError,
   convertKeysToSnakeCase,
+  sendResponse,
 };
