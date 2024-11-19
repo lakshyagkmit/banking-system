@@ -1,14 +1,22 @@
 'use strict';
-
 /** @type {import('sequelize-cli').Migration} */
+
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('applications', {
+    await queryInterface.createTable('branches', {
       id: {
+        type: Sequelize.UUID,
         allowNull: false,
         primaryKey: true,
-        type: Sequelize.UUID,
         defaultValue: Sequelize.literal('gen_random_uuid()'),
+      },
+      bank_id: {
+        type: Sequelize.UUID,
+        allowNull: false,
+        references: {
+          model: 'banks',
+          key: 'id',
+        },
       },
       user_id: {
         type: Sequelize.UUID,
@@ -17,24 +25,24 @@ module.exports = {
           model: 'users',
           key: 'id',
         },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE',
       },
-      branch_ifsc_code: {
+      address: {
+        type: Sequelize.TEXT,
+        allowNull: false,
+      },
+      ifsc_code: {
         type: Sequelize.STRING(20),
-        allowNull: true,
+        allowNull: false,
+        unique: true,
       },
-      account_type: {
+      contact: {
         type: Sequelize.STRING(20),
-        allowNull: true,
+        allowNull: false,
+        unique: true,
       },
-      account_subtype: {
-        type: Sequelize.STRING(20),
-        allowNull: true,
-      },
-      nominee_name: {
-        type: Sequelize.STRING(50),
-        allowNull: true,
+      total_lockers: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
       },
       created_at: {
         allowNull: false,
@@ -53,6 +61,6 @@ module.exports = {
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('applications');
+    await queryInterface.dropTable('branches');
   },
 };

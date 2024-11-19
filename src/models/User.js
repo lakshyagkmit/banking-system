@@ -44,7 +44,7 @@ module.exports = (sequelize, DataTypes) => {
         unique: true,
       },
       gov_issue_id_type: {
-        type: DataTypes.ENUM('passport', 'adhar', 'pan', 'voter_id', "driver's license"),
+        type: DataTypes.ENUM('passport', 'adhar', 'pan', 'voter_id', 'driver_license'),
       },
       gov_issue_id_image: {
         type: DataTypes.TEXT,
@@ -57,11 +57,6 @@ module.exports = (sequelize, DataTypes) => {
       },
       address: {
         type: DataTypes.TEXT,
-      },
-      email_verified: {
-        type: DataTypes.BOOLEAN,
-        allowNull: false,
-        defaultValue: false,
       },
       is_verified: {
         type: DataTypes.BOOLEAN,

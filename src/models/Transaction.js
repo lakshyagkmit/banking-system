@@ -5,7 +5,7 @@ module.exports = (sequelize, DataTypes) => {
   class Transaction extends Model {
     static associate(models) {
       // Transaction belongs to an Account
-      Transaction.belongsTo(models.Account, {
+      Transaction.belongsTo(models.UserAccount, {
         foreignKey: 'account_id',
       });
     }
@@ -22,10 +22,7 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.UUID,
         allowNull: false,
       },
-      from_account_no: {
-        type: DataTypes.STRING(20),
-      },
-      to_account_no: {
+      account_no: {
         type: DataTypes.STRING(20),
       },
       type: {
@@ -33,7 +30,7 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
       },
       payment_method: {
-        type: DataTypes.ENUM('Credit Card', 'Debit Card', 'NEFT', 'RTGS', 'IMPS', 'UPI'),
+        type: DataTypes.ENUM('Credit_Card', 'Debit_Card', 'NEFT', 'RTGS', 'IMPS', 'UPI'),
         allowNull: false,
       },
       amount: {

@@ -3,7 +3,7 @@
 
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('policies', {
+    await queryInterface.createTable('account_policies', {
       id: {
         allowNull: false,
         primaryKey: true,
@@ -19,11 +19,12 @@ module.exports = {
         },
       },
       account_type: {
-        type: Sequelize.ENUM('savings', 'current', 'fixed', 'deposit'),
+        type: Sequelize.ENUM('savings', 'current', 'fixed', 'recurring'),
         allowNull: false,
       },
-      account_subtype: {
-        type: Sequelize.STRING(50),
+      initial_amount: {
+        type: Sequelize.DECIMAL(20, 2),
+        defaultValue: 0.0,
       },
       interest_rate: {
         type: Sequelize.DECIMAL(5, 2),
@@ -58,6 +59,6 @@ module.exports = {
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('policies');
+    await queryInterface.dropTable('account_policies');
   },
 };
