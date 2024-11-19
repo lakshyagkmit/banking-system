@@ -29,7 +29,7 @@ module.exports = {
         unique: true,
       },
       gov_issue_id_type: {
-        type: Sequelize.ENUM('passport', 'adhar', 'pan', 'voter_id', "driver's license"),
+        type: Sequelize.ENUM('passport', 'adhar', 'pan', 'voter_id', 'driver_license'),
       },
       gov_issue_id_image: {
         type: Sequelize.TEXT,
@@ -42,11 +42,6 @@ module.exports = {
       },
       address: {
         type: Sequelize.TEXT,
-      },
-      email_verified: {
-        type: Sequelize.BOOLEAN,
-        allowNull: false,
-        defaultValue: false,
       },
       is_verified: {
         type: Sequelize.BOOLEAN,

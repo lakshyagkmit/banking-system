@@ -2,16 +2,16 @@
 const { Model } = require('sequelize');
 
 module.exports = (sequelize, DataTypes) => {
-  class Application extends Model {
+  class UserApplication extends Model {
     static associate(models) {
       // Define associations here
-      Application.belongsTo(models.User, {
+      UserApplication.belongsTo(models.User, {
         foreignKey: 'user_id',
       });
     }
   }
 
-  Application.init(
+  UserApplication.init(
     {
       id: {
         type: DataTypes.UUID,
@@ -24,29 +24,21 @@ module.exports = (sequelize, DataTypes) => {
       },
       branch_ifsc_code: {
         type: DataTypes.STRING(20),
-        allowNull: true,
+        allowNull: false,
       },
-      account_type: {
-        type: DataTypes.STRING(20),
-        allowNull: true,
-      },
-      account_subtype: {
-        type: DataTypes.STRING(20),
-        allowNull: true,
+      type: {
+        type: DataTypes.ENUM('savings', 'current', 'fixed', 'recurring', 'locker'),
+        allowNull: false,
       },
       nominee_name: {
         type: DataTypes.STRING(50),
         allowNull: true,
       },
-      locker_request_desc: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-      },
     },
     {
       sequelize,
-      modelName: 'Application',
-      tableName: 'applications',
+      modelName: 'UserApplication',
+      tableName: 'user_applications',
       underscored: true,
       timestamps: true,
       paranoid: true,
@@ -56,5 +48,5 @@ module.exports = (sequelize, DataTypes) => {
     }
   );
 
-  return Application;
+  return UserApplication;
 };

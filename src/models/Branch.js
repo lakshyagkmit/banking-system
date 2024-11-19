@@ -31,10 +31,6 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.UUID,
         allowNull: false,
       },
-      name: {
-        type: DataTypes.STRING(50),
-        allowNull: false,
-      },
       address: {
         type: DataTypes.TEXT,
         allowNull: false,
@@ -50,10 +46,6 @@ module.exports = (sequelize, DataTypes) => {
         unique: true,
       },
       total_lockers: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-      },
-      available_lockers: {
         type: DataTypes.INTEGER,
         allowNull: false,
       },

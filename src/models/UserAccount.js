@@ -2,26 +2,26 @@
 const { Model } = require('sequelize');
 
 module.exports = (sequelize, DataTypes) => {
-  class Account extends Model {
+  class UserAccount extends Model {
     static associate(models) {
       // Account belongs to a Policy
-      Account.belongsTo(models.Policy, {
+      UserAccount.belongsTo(models.AccountPolicy, {
         foreignKey: 'policy_id',
       });
 
       // Account belongs to a Branch
-      Account.belongsTo(models.Branch, {
+      UserAccount.belongsTo(models.Branch, {
         foreignKey: 'branch_id',
       });
 
       // Account belongs to a User
-      Account.belongsTo(models.User, {
+      UserAccount.belongsTo(models.User, {
         foreignKey: 'user_id',
       });
     }
   }
 
-  Account.init(
+  UserAccount.init(
     {
       id: {
         type: DataTypes.UUID,
@@ -44,9 +44,6 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.ENUM('savings', 'current', 'fixed', 'recurring'),
         allowNull: false,
       },
-      subtype: {
-        type: DataTypes.STRING(50),
-      },
       number: {
         type: DataTypes.STRING(20),
         allowNull: false,
@@ -54,10 +51,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       balance: {
         type: DataTypes.DECIMAL(20, 2),
-        allowNull: false,
-      },
-      interest_rate: {
-        type: DataTypes.DECIMAL(5, 2),
+        defaultValue: 0.0,
         allowNull: false,
       },
       nominee: {
@@ -81,8 +75,8 @@ module.exports = (sequelize, DataTypes) => {
     },
     {
       sequelize,
-      modelName: 'Account',
-      tableName: 'accounts',
+      modelName: 'UserAccount',
+      tableName: 'user_accounts',
       underscored: true,
       timestamps: true,
       paranoid: true,
@@ -92,5 +86,5 @@ module.exports = (sequelize, DataTypes) => {
     }
   );
 
-  return Account;
+  return UserAccount;
 };

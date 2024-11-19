@@ -14,14 +14,11 @@ module.exports = {
         type: Sequelize.UUID,
         allowNull: false,
         references: {
-          model: 'accounts',
+          model: 'user_accounts',
           key: 'id',
         },
       },
-      from_account_no: {
-        type: Sequelize.STRING(20),
-      },
-      to_account_no: {
+      account_no: {
         type: Sequelize.STRING(20),
       },
       type: {
@@ -29,7 +26,7 @@ module.exports = {
         allowNull: false,
       },
       payment_method: {
-        type: Sequelize.ENUM('Credit Card', 'Debit Card', 'NEFT', 'RTGS', 'IMPS', 'UPI'),
+        type: Sequelize.ENUM('Credit_Card', 'Debit_Card', 'NEFT', 'RTGS', 'IMPS', 'UPI'),
         allowNull: false,
       },
       amount: {
