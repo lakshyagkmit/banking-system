@@ -1,8 +1,9 @@
 const Joi = require('joi');
 const validateHelper = require('../helpers/validates.helper');
+const constants = require('../constants/constants');
 
 // user creation validator
-async function createUserSchema(req, res, next) {
+async function createSchema(req, res, next) {
   const schema = Joi.object({
     name: Joi.string().max(50).required(),
     email: Joi.string().email().required(),
@@ -21,7 +22,7 @@ async function createUserSchema(req, res, next) {
   validateHelper.validateRequest(req, res, next, schema, 'body');
 }
 
-const updateUserSchema = async (req, res, next) => {
+const updateSchema = async (req, res, next) => {
   const schema = Joi.object({
     name: Joi.string().max(50).optional(),
     email: Joi.string().email().optional(),
@@ -36,4 +37,4 @@ const updateUserSchema = async (req, res, next) => {
   validateHelper.validateRequest(req, res, next, schema, 'body');
 };
 
-module.exports = { createUserSchema, updateUserSchema };
+module.exports = { createSchema, updateSchema };

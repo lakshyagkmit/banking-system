@@ -3,9 +3,9 @@ const validateHelper = require('../helpers/validates.helper');
 const constants = require('../constants/constants');
 
 //create transaction validator
-async function transactionSchema(req, res, next) {
+async function createSchema(req, res, next) {
   const schema = Joi.object({
-    toAccountNo: Joi.string().optional(),
+    accountNo: Joi.string().optional(),
     type: Joi.string()
       .valid(...Object.values(constants.TRANSACTION_TYPES))
       .required(),
@@ -19,4 +19,4 @@ async function transactionSchema(req, res, next) {
   validateHelper.validateRequest(req, res, next, schema, 'body');
 }
 
-module.exports = { transactionSchema };
+module.exports = { createSchema };

@@ -2,7 +2,7 @@ const Joi = require('joi');
 const validateHelper = require('../helpers/validates.helper');
 
 //assign locker validator
-async function lockerAssignSchema(req, res, next) {
+async function assignSchema(req, res, next) {
   const schema = Joi.object({
     email: Joi.string().email().required(),
     lockerSerialNo: Joi.string().max(20).required(),
@@ -12,7 +12,7 @@ async function lockerAssignSchema(req, res, next) {
 }
 
 //create locker validator
-async function createLockerSchema(req, res, next) {
+async function createSchema(req, res, next) {
   const schema = Joi.object({
     numberOfLockers: Joi.number().required(),
     monthlyCharge: Joi.number().required(),
@@ -22,7 +22,7 @@ async function createLockerSchema(req, res, next) {
 }
 
 //update locker validator
-async function updateLockerSchema(req, res, next) {
+async function updateSchema(req, res, next) {
   const schema = Joi.object({
     monthlyCharge: Joi.number().required(),
   });
@@ -30,4 +30,4 @@ async function updateLockerSchema(req, res, next) {
   validateHelper.validateRequest(req, res, next, schema, 'body');
 }
 
-module.exports = { lockerAssignSchema, createLockerSchema, updateLockerSchema };
+module.exports = { assignSchema, createSchema, updateSchema };
