@@ -7,7 +7,7 @@ async function create(payload) {
   const transaction = await sequelize.transaction();
 
   try {
-    const { userId, name, address, ifscCode, contact, totalLockers } = payload;
+    const { userId, address, ifscCode, contact, totalLockers } = payload;
 
     const userWithRole = await User.findOne({
       where: { id: userId },
@@ -19,7 +19,7 @@ async function create(payload) {
     });
 
     if (!userWithRole) {
-      commonHelper.customError('The specified user is not authorized as a Branch Manager', 403);
+      return commonHelper.customError('The specified user is not authorized as a Branch Manager', 403);
     }
 
     const existingBranch = await Branch.findOne({
@@ -36,7 +36,7 @@ async function create(payload) {
 
     for (const { field, value } of duplicateFields) {
       if (existingBranch && existingBranch[field] === value) {
-        commonHelper.customError(`Branch with the same ${field} already exists`, 409);
+        return commonHelper.customError(`Branch with the same ${field} already exists`, 409);
       }
     }
 
@@ -46,16 +46,15 @@ async function create(payload) {
       {
         bank_id: bank.id,
         user_id: userId,
-        name,
         address,
         ifsc_code: ifscCode,
         contact,
         total_lockers: totalLockers,
-        available_lockers: totalLockers,
       },
       { transaction }
     );
     await transaction.commit();
+
     return newBranch;
   } catch (error) {
     await transaction.rollback();
@@ -64,7 +63,7 @@ async function create(payload) {
 }
 
 // get all branches;
-async function list(query) {
+async function index(query) {
   const { page, limit } = query;
   const offset = (page - 1) * limit;
 
@@ -74,11 +73,11 @@ async function list(query) {
   });
 
   if (!branches.rows.length) {
-    commonHelper.customError('No branches found', 404);
+    return commonHelper.customError('No branches found', 404);
   }
 
   return {
-    branches: branches.rows,
+    rows: branches.rows,
     totalBranches: branches.count,
     currentPage: page,
     totalPages: Math.ceil(branches.count / limit),
@@ -86,28 +85,17 @@ async function list(query) {
 }
 
 // get a branch by id
-async function listById(id) {
-  const branch = await Branch.findByPk(id);
-  return branch;
+async function view(id) {
+  return Branch.findByPk(id);
 }
 
 // update a branch by id
-async function updateById(id, payload) {
+async function update(id, payload) {
   const transaction = await sequelize.transaction();
   try {
     const branch = await Branch.findByPk(id);
     if (!branch) {
-      commonHelper.customError('Branch not found', 404);
-    }
-
-    if (payload.totalLockers) {
-      const availableLockers = payload.totalLockers - branch.total_lockers + branch.available_lockers;
-      await branch.update(
-        {
-          available_lockers: availableLockers,
-        },
-        { transaction }
-      );
+      return commonHelper.customError('Branch not found', 404);
     }
 
     const data = commonHelper.convertKeysToSnakeCase(payload);
@@ -122,20 +110,4 @@ async function updateById(id, payload) {
   }
 }
 
-// delete branch by id
-async function deleteById(id) {
-  const transaction = await sequelize.transaction();
-  try {
-    const branch = await Branch.findByPk(id);
-    if (!branch) {
-      commonHelper.customError('Branch not found', 404);
-    }
-    await branch.destroy({ transaction });
-    await transaction.commit();
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
-  }
-}
-
-module.exports = { create, list, listById, updateById, deleteById };
+module.exports = { create, index, view, update };
