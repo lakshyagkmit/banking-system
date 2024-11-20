@@ -30,7 +30,7 @@ async function idSchema(req, res, next) {
       .guid({
         version: ['uuidv4'],
       })
-      .optional(),
+      .required(),
 
     transactionId: Joi.string()
       .guid({
