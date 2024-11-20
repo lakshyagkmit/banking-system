@@ -22,10 +22,6 @@ async function createSchema(req, res, next) {
 // update policy validator
 async function updateSchema(req, res, next) {
   const schema = Joi.object({
-    accountType: Joi.string()
-      .valid(...Object.values(constants.ACCOUNT_TYPES))
-      .optional()
-      .label('Account Type'),
     initialAmount: Joi.number().precision(2).min(0).optional().label('Initial Amount'),
     interestRate: Joi.number().precision(2).min(0).max(10).optional().label('Interest Rate'),
     minimumAmount: Joi.number().precision(2).min(0).optional().label('Minimum Amount'),

@@ -1,57 +1,68 @@
 const policyService = require('../services/policies.service');
 const commonHelper = require('../helpers/commonFunctions.helper');
 
-async function create(req, res) {
+async function create(req, res, next) {
   try {
     const { body } = req;
-    const policy = await policyService.create(body);
-    res.status(201).json(policy);
+    res.data = await policyService.create(body);
+    res.statusCode = 201;
+    next();
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
   }
 }
 
-async function get(req, res) {
+async function index(req, res, next) {
   try {
     const { query } = req;
-    const policies = await policyService.list(query);
-    res.status(200).json(policies);
+    res.data = await policyService.index(query);
+    res.statusCode = 200;
+    next();
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
   }
 }
 
-async function getById(req, res) {
+async function view(req, res, next) {
   try {
     const { id } = req.params;
-    const policy = await policyService.listById(id);
+    const policy = await policyService.view(id);
     if (!policy) {
-      return res.status(404).json({ error: 'Branch not found' });
+      res.message = 'policy not found';
+      res.statusCode = 404;
+      next();
     }
-    res.status(200).json(policy);
+    res.data = policy;
+    res.statusCode = 200;
+    next();
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
   }
 }
 
-async function updateById(req, res) {
+async function update(req, res, next) {
   try {
     const { params, body } = req;
-    const policy = await policyService.updateById(params.id, body);
-    res.status(200).json({ policy, message: 'User updated successfully' });
+    const { id } = params;
+    res.data = await policyService.update(id, body);
+    res.message = 'policy updated successfully';
+    res.statusCode = 200;
+    next();
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
   }
 }
 
-async function deleteById(req, res) {
+async function remove(req, res, next) {
   try {
     const { id } = req.params;
-    await policyService.deleteById(id);
-    res.status(204).send({ message: 'policy deleted successfully' });
+    await policyService.remove(id);
+    res.message = 'policy deleted successfully';
+    res.statusCode = 204;
+    next();
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
   }
 }
 
-module.exports = { create, get, getById, updateById, deleteById };
+module.exports = { create, index, view, update, remove };

@@ -1,4 +1,4 @@
-const { Bank, Policy, sequelize } = require('../models');
+const { Bank, AccountPolicy, UserAccount, sequelize } = require('../models');
 const commonHelper = require('../helpers/commonFunctions.helper');
 
 // create new policy
@@ -6,17 +6,16 @@ async function create(payload) {
   const transaction = await sequelize.transaction();
 
   try {
-    const { accountType, accountSubtype, interestRate, minimumAmount, lockInPeriod, penaltyFee } = payload;
+    const { accountType, initialAmount, interestRate, minimumAmount, lockInPeriod, penaltyFee } = payload;
 
-    const existingPolicy = await Policy.findOne({
+    const existingPolicy = await AccountPolicy.findOne({
       where: {
         account_type: accountType,
-        account_subtype: accountSubtype,
       },
     });
 
     if (existingPolicy) {
-      commonHelper.customError(
+      return commonHelper.customError(
         'Policy with same account type and subtype exists, please use another type or subtype',
         409
       );
@@ -24,11 +23,11 @@ async function create(payload) {
 
     const bank = await Bank.findOne();
 
-    const newPolicy = await Policy.create(
+    const newPolicy = await AccountPolicy.create(
       {
         bank_id: bank.id,
         account_type: accountType,
-        account_subtype: accountSubtype,
+        initial_amount: initialAmount,
         interest_rate: interestRate,
         minimum_amount: minimumAmount,
         lock_in_period: lockInPeriod,
@@ -37,6 +36,7 @@ async function create(payload) {
       { transaction }
     );
     await transaction.commit();
+
     return newPolicy;
   } catch (error) {
     await transaction.rollback();
@@ -45,21 +45,21 @@ async function create(payload) {
 }
 
 // list all policies
-async function list(query) {
+async function index(query) {
   const { page, limit } = query;
   const offset = (page - 1) * limit;
 
-  const policies = await Policy.findAndCountAll({
+  const policies = await AccountPolicy.findAndCountAll({
     offset: offset,
     limit: limit,
   });
 
   if (!policies.rows.length) {
-    commonHelper.customError('No policies found', 404);
+    return commonHelper.customError('No policies found', 404);
   }
 
   return {
-    policies: policies.rows,
+    rows: policies.rows,
     totalPolicies: policies.count,
     currentPage: page,
     totalPages: Math.ceil(policies.count / limit),
@@ -67,24 +67,24 @@ async function list(query) {
 }
 
 // get a policy by id
-async function listById(id) {
-  const policy = await Policy.findByPk(id);
-  return policy;
+async function view(id) {
+  return AccountPolicy.findByPk(id);
 }
 
 // update a policy by id
-async function updateById(id, payload) {
+async function update(id, payload) {
   const transaction = await sequelize.transaction();
   try {
-    const policy = await Policy.findByPk(id);
+    const policy = await AccountPolicy.findByPk(id);
     if (!policy) {
-      commonHelper.customError('Policy not found', 404);
+      return commonHelper.customError('Policy not found', 404);
     }
 
     const data = commonHelper.convertKeysToSnakeCase(payload);
 
     const updatedPolicy = await policy.update(data, { transaction });
     await transaction.commit();
+
     return updatedPolicy;
   } catch (error) {
     await transaction.rollback();
@@ -93,13 +93,22 @@ async function updateById(id, payload) {
 }
 
 // delete policy by id
-async function deleteById(id) {
+async function remove(id) {
   const transaction = await sequelize.transaction();
   try {
-    const policy = await Policy.findByPk(id);
+    const policy = await AccountPolicy.findByPk(id);
     if (!policy) {
-      commonHelper.customError('Policy not found', 404);
+      return commonHelper.customError('Policy not found', 404);
     }
+
+    const account = UserAccount.findOne({
+      where: { policy_id: policy.id },
+    });
+
+    if (account) {
+      return commonHelper.customError('Account exists with this policy, policy cannot be deleted', 409);
+    }
+
     await policy.destroy({ transaction });
     await transaction.commit();
   } catch (error) {
@@ -108,4 +117,4 @@ async function deleteById(id) {
   }
 }
 
-module.exports = { create, list, listById, updateById, deleteById };
+module.exports = { create, index, view, update, remove };
