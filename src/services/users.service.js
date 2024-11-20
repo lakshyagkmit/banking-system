@@ -1,4 +1,4 @@
-const { User, Role, UserRole, sequelize } = require('../models');
+const { User, Role, UserRole, Branch, UserAccount, sequelize } = require('../models');
 const { Op } = require('sequelize');
 const bcrypt = require('bcryptjs');
 const commonHelper = require('../helpers/commonFunctions.helper');
@@ -10,19 +10,9 @@ const constants = require('../constants/constants');
 async function create(payload, file, user) {
   const transaction = await sequelize.transaction();
   try {
-    const {
-      name,
-      email,
-      password,
-      contact,
-      govIssueIdType,
-      fatherName,
-      motherName,
-      address,
-      emailVerified,
-      isVerified,
-    } = payload;
-    const role = user.role;
+    const { name, email, password, contact, govIssueIdType, fatherName, motherName, address, isVerified } =
+      payload;
+    const { role } = user;
 
     const existingUser = await User.findOne({
       where: {
@@ -32,11 +22,11 @@ async function create(payload, file, user) {
 
     if (existingUser) {
       const field = existingUser.email === email ? 'email' : 'contact';
-      commonHelper.customError(`User with ${field} exists, please use another ${field}`, 409);
+      return commonHelper.customError(`User with ${field} exists, please use another ${field}`, 409);
     }
 
     if (!file) {
-      commonHelper.customError(`Please add gov_issue_id_image`, 409);
+      return commonHelper.customError(`Please add gov_issue_id_image`, 409);
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -53,7 +43,6 @@ async function create(payload, file, user) {
         father_name: fatherName,
         mother_name: motherName,
         address,
-        email_verified: emailVerified,
         is_verified: isVerified,
       },
       { transaction }
@@ -70,8 +59,8 @@ async function create(payload, file, user) {
       },
       { transaction }
     );
-
     await transaction.commit();
+
     return newUser;
   } catch (error) {
     await transaction.rollback();
@@ -80,7 +69,7 @@ async function create(payload, file, user) {
 }
 
 // List users (Branch Manager and Customer if Admin, only Customers if Branch Manager)
-async function list(query, user) {
+async function index(query, user) {
   const { page, limit, userRole } = query;
   const { role } = user;
 
@@ -110,20 +99,19 @@ async function list(query, user) {
   });
 
   if (!users.rows.length) {
-    commonHelper.customError('No users found', 404);
+    return commonHelper.customError('No users found', 404);
   }
 
   return {
     totalItems: users.count,
     totalPages: Math.ceil(users.count / limit),
     currentPage: page,
-    data: users.rows,
+    rows: users.rows,
   };
 }
 
 // Get a user by ID with access control
-async function listById(params, user) {
-  const { id } = params;
+async function view(id, user) {
   const { role } = user;
 
   let roles;
@@ -148,11 +136,10 @@ async function listById(params, user) {
 }
 
 // Update a user by ID with role-based access control
-async function updateById(params, payload, user) {
+async function update(id, payload, user) {
   const transaction = await sequelize.transaction();
 
   try {
-    const { id } = params;
     const { role } = user;
 
     const userToUpdate = await User.findOne({
@@ -165,7 +152,7 @@ async function updateById(params, payload, user) {
     });
 
     if (!userToUpdate) {
-      commonHelper.customError('User not found', 404);
+      return commonHelper.customError('User not found', 404);
     }
 
     const userRole = userToUpdate.Roles[0].code;
@@ -178,6 +165,7 @@ async function updateById(params, payload, user) {
 
       const updatedUser = await userToUpdate.update(data, { transaction });
       await transaction.commit();
+
       return updatedUser;
     }
   } catch (error) {
@@ -187,32 +175,64 @@ async function updateById(params, payload, user) {
 }
 
 // Soft delete a user by ID with role-based access control
-async function deleteById(id, user) {
+async function remove(id, user) {
   const transaction = await sequelize.transaction();
   try {
     const { role } = user;
+
     const userToDelete = await User.findByPk(id, {
-      include: Role,
+      include: [
+        {
+          model: Role,
+        },
+        {
+          model: Branch,
+        },
+        {
+          model: UserAccount,
+        },
+      ],
     });
 
     if (!userToDelete) {
-      commonHelper.customError('User not found', 404);
+      return commonHelper.customError('User not found', 404);
     }
 
     const userRole = userToDelete.Roles[0].code;
 
+    if (role === constants.ROLES['101'] && userRole === constants.ROLES['102'] && userToDelete.Branch) {
+      return commonHelper.customError('Cannot delete a Branch Manager assigned to a branch', 409);
+    }
+
+    if (
+      (role === constants.ROLES['101'] || role === constants.ROLES['102']) &&
+      userRole === constants.ROLES['103'] &&
+      userToDelete.Account
+    ) {
+      return commonHelper.customError('Cannot delete a customer with an active account', 409);
+    }
+
     if (
       role === constants.ROLES['101'] ||
-      (role === constants.ROLES['102'] && userRole === constants.ROLES['102'])
+      (role === constants.ROLES['102'] && userRole === constants.ROLES['103'])
     ) {
       await userToDelete.destroy({ transaction });
-      await transaction.commit();
-      return;
+      await UserRole.destroy(
+        {
+          where: {
+            user_id: id,
+          },
+        },
+        { transaction }
+      );
     }
+
+    await transaction.commit();
+    return;
   } catch (error) {
     await transaction.rollback();
     throw error;
   }
 }
 
-module.exports = { create, list, listById, updateById, deleteById };
+module.exports = { create, index, view, update, remove };
