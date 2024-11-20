@@ -30,7 +30,7 @@ async function view(req, res, next) {
     if (!policy) {
       res.message = 'policy not found';
       res.statusCode = 404;
-      next();
+      return next();
     }
     res.data = policy;
     res.statusCode = 200;

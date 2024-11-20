@@ -42,7 +42,7 @@ async function view(req, res, next) {
     if (!application) {
       res.message = 'Application not found';
       res.statusCode = 404;
-      next();
+      return next();
     }
     res.data = application;
     res.statusCode = 201;
