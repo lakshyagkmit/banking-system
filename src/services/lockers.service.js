@@ -199,6 +199,7 @@ async function update(id, payload, user) {
   const transaction = await sequelize.transaction();
 
   try {
+    const { monthlyCharge } = payload;
     const branchManagerId = user.id;
 
     const branch = await Branch.findOne({
@@ -220,9 +221,12 @@ async function update(id, payload, user) {
       return commonHelper.customError('Locker not found', 404);
     }
 
-    const data = await commonHelper.convertKeysToSnakeCase(payload);
-
-    await locker.update(data, { transaction });
+    await locker.update(
+      {
+        monthly_charge: monthlyCharge,
+      },
+      { transaction }
+    );
     await transaction.commit();
 
     return { message: 'Locker updated successfully' };

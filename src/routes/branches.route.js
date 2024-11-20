@@ -14,7 +14,7 @@ router.post(
   '/',
   authMiddleware.checkAuthToken,
   authMiddleware.authorizeRole(constants.ROLES['101']),
-  branchValidator.createSchema,
+  branchValidator.branchSchema,
   branchController.create,
   branchSerializer.serialize,
   commonHelper.sendResponse
@@ -45,7 +45,7 @@ router.put(
   authMiddleware.checkAuthToken,
   authMiddleware.authorizeRole(constants.ROLES['101']),
   commonValidator.idSchema,
-  branchValidator.updateSchema,
+  branchValidator.branchSchema,
   branchController.update,
   branchSerializer.serialize,
   commonHelper.sendResponse

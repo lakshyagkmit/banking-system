@@ -22,12 +22,9 @@ async function createSchema(req, res, next) {
 // update policy validator
 async function updateSchema(req, res, next) {
   const schema = Joi.object({
-    initialAmount: Joi.number().precision(2).min(0).optional().label('Initial Amount'),
-    interestRate: Joi.number().precision(2).min(0).max(10).optional().label('Interest Rate'),
-    minimumAmount: Joi.number().precision(2).min(0).optional().label('Minimum Amount'),
-    lockInPeriod: Joi.number().integer().min(0).optional().label('Lock-in Period'),
-    penaltyFee: Joi.number().precision(2).min(0).optional().label('Penalty Fee'),
-  }).min(1);
+    interestRate: Joi.number().precision(2).min(0).max(10).required().label('Interest Rate'),
+    penaltyFee: Joi.number().precision(2).min(0).required().label('Penalty Fee'),
+  });
 
   validateHelper.validateRequest(req, res, next, schema, 'body');
 }

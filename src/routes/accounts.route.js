@@ -42,7 +42,7 @@ router.get(
   commonHelper.sendResponse
 );
 
-router.put(
+router.patch(
   '/:id',
   authMiddleware.checkAuthToken,
   authMiddleware.authorizeRole(constants.ROLES['102']),

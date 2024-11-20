@@ -75,14 +75,19 @@ async function view(id) {
 async function update(id, payload) {
   const transaction = await sequelize.transaction();
   try {
+    const { interestRate, penaltyFee } = payload;
     const policy = await AccountPolicy.findByPk(id);
     if (!policy) {
       return commonHelper.customError('Policy not found', 404);
     }
 
-    const data = await commonHelper.convertKeysToSnakeCase(payload);
-
-    const updatedPolicy = await policy.update(data, { transaction });
+    const updatedPolicy = await policy.update(
+      {
+        interest_rate: interestRate,
+        penalty_fee: penaltyFee,
+      },
+      { transaction }
+    );
     await transaction.commit();
 
     return updatedPolicy;
