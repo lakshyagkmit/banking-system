@@ -31,7 +31,7 @@ async function view(req, res, next) {
     if (!account) {
       res.message = 'User not found';
       res.statusCode = 404;
-      next();
+      return next();
     }
     res.data = account;
     res.statusCode = 200;

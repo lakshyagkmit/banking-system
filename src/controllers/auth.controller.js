@@ -60,7 +60,7 @@ async function resendOtp(req, res, next) {
   }
 }
 
-async function logout(req, res) {
+async function logout(req, res, next) {
   res.message = 'User logged out successfully';
   res.statusCode = 204;
   next();

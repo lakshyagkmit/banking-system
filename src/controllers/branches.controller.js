@@ -30,7 +30,7 @@ async function view(req, res, next) {
     if (!branch) {
       res.message = 'Branch not found';
       res.statusCode = 404;
-      next();
+      return next();
     }
     res.data = branch;
     res.statusCode = 200;
