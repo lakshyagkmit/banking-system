@@ -2,7 +2,7 @@ const express = require('express');
 const authMiddleware = require('../middlewares/auth.middleware');
 const applicationValidator = require('../validators/applications.validator');
 const applicationController = require('../controllers/applications.controller');
-const applicationSerialize = require('../serializers/applications.serializer');
+const applicationSerializer = require('../serializers/applications.serializer');
 const commonHelper = require('../helpers/commonFunctions.helper');
 const commonValidator = require('../validators/commons.validator');
 const constants = require('../constants/constants');
@@ -15,7 +15,7 @@ router.post(
   authMiddleware.checkAuthToken,
   applicationValidator.accountSchema,
   applicationController.requestAccount,
-  applicationSerialize.serialize,
+  applicationSerializer.serialize,
   commonHelper.sendResponse
 );
 
@@ -24,7 +24,7 @@ router.post(
   authMiddleware.checkAuthToken,
   applicationValidator.lockerSchema,
   applicationController.requestLocker,
-  applicationSerialize.serialize,
+  applicationSerializer.serialize,
   commonHelper.sendResponse
 );
 
@@ -33,8 +33,8 @@ router.get(
   authMiddleware.checkAuthToken,
   authMiddleware.authorizeRole(constants.ROLES['102']),
   commonValidator.querySchema,
-  applicationController.inde,
-  applicationSerialize.serialize,
+  applicationController.index,
+  applicationSerializer.serialize,
   commonHelper.sendResponse
 );
 
@@ -44,7 +44,7 @@ router.get(
   authMiddleware.authorizeRole(constants.ROLES['102']),
   commonValidator.idSchema,
   applicationController.view,
-  applicationSerialize.serialize,
+  applicationSerializer.serialize,
   commonHelper.sendResponse
 );
 

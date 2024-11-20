@@ -98,7 +98,7 @@ async function update(id, payload) {
       return commonHelper.customError('Branch not found', 404);
     }
 
-    const data = commonHelper.convertKeysToSnakeCase(payload);
+    const data = await commonHelper.convertKeysToSnakeCase(payload);
 
     const updatedBranch = await branch.update(data, { transaction });
 

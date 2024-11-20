@@ -13,7 +13,7 @@ router.post(
   '/assign',
   authMiddleware.checkAuthToken,
   authMiddleware.authorizeRole(constants.ROLES['102']),
-  lockerValidator.lockerAssignSchema,
+  lockerValidator.assignSchema,
   lockerController.assign,
   commonHelper.sendResponse
 );
@@ -22,7 +22,7 @@ router.post(
   '/',
   authMiddleware.checkAuthToken,
   authMiddleware.authorizeRole(constants.ROLES['102']),
-  lockerValidator.createLockerSchema,
+  lockerValidator.createSchema,
   lockerController.create,
   commonHelper.sendResponse
 );
@@ -52,7 +52,7 @@ router.patch(
   authMiddleware.checkAuthToken,
   authMiddleware.authorizeRole(constants.ROLES['102']),
   commonValidator.idSchema,
-  lockerValidator.updateLockerSchema,
+  lockerValidator.updateSchema,
   lockerController.update,
   lockerSerializer.serialize,
   commonHelper.sendResponse

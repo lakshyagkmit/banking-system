@@ -14,7 +14,7 @@ router.post(
   authMiddleware.checkAuthToken,
   authMiddleware.authorizeRole([constants.ROLES['101'], constants.ROLES['102']]),
   multerMiddleware.upload.single('govIssueIdImage'),
-  userValidator.createUserSchema,
+  userValidator.createSchema,
   userController.create,
   userSerializer.serialize,
   commonHelper.sendResponse
@@ -44,7 +44,7 @@ router.put(
   authMiddleware.checkAuthToken,
   authMiddleware.authorizeRole([constants.ROLES['101'], constants.ROLES['102']]),
   commonValidator.idSchema,
-  userValidator.updateUserSchema,
+  userValidator.updateSchema,
   userController.update,
   userSerializer.serialize,
   commonHelper.sendResponse
@@ -56,7 +56,6 @@ router.delete(
   authMiddleware.authorizeRole([constants.ROLES['101'], constants.ROLES['102']]),
   commonValidator.idSchema,
   userController.remove,
-  userSerializer.serialize,
   commonHelper.sendResponse
 );
 
