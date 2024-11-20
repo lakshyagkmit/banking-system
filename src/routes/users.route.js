@@ -5,15 +5,19 @@ const multerMiddleware = require('../middlewares/multer.middleware');
 const userValidator = require('../validators/users.validator');
 const commonValidator = require('../validators/commons.validator');
 const userController = require('../controllers/users.controller');
+const userSerializer = require('../serializers/users.serializer');
+const commonHelper = require('../helpers/commonFunctions.helper');
 const constants = require('../constants/constants');
 
 router.post(
   '/',
   authMiddleware.checkAuthToken,
-  authMiddleware.authorizeRole(constants.ROLES['101']),
+  authMiddleware.authorizeRole([constants.ROLES['101'], constants.ROLES['102']]),
   multerMiddleware.upload.single('govIssueIdImage'),
   userValidator.createUserSchema,
-  userController.create
+  userController.create,
+  userSerializer.serialize,
+  commonHelper.sendResponse
 );
 
 router.get(
@@ -21,23 +25,29 @@ router.get(
   authMiddleware.checkAuthToken,
   authMiddleware.authorizeRole([constants.ROLES['101'], constants.ROLES['102']]),
   commonValidator.querySchema,
-  userController.get
+  userController.index,
+  userSerializer.serialize,
+  commonHelper.sendResponse
 );
 
 router.get(
   '/:id',
   authMiddleware.checkAuthToken,
-  authMiddleware.authorizeRole([constants.ROLES['101'], constants.ROLES['102']]),
   commonValidator.idSchema,
-  userController.getById
+  userController.view,
+  userSerializer.serialize,
+  commonHelper.sendResponse
 );
 
 router.put(
   '/:id',
   authMiddleware.checkAuthToken,
+  authMiddleware.authorizeRole([constants.ROLES['101'], constants.ROLES['102']]),
   commonValidator.idSchema,
   userValidator.updateUserSchema,
-  userController.updateById
+  userController.update,
+  userSerializer.serialize,
+  commonHelper.sendResponse
 );
 
 router.delete(
@@ -45,7 +55,9 @@ router.delete(
   authMiddleware.checkAuthToken,
   authMiddleware.authorizeRole([constants.ROLES['101'], constants.ROLES['102']]),
   commonValidator.idSchema,
-  userController.deleteById
+  userController.remove,
+  userSerializer.serialize,
+  commonHelper.sendResponse
 );
 
 module.exports = router;

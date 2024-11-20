@@ -15,7 +15,6 @@ async function createSchema(req, res, next) {
     fatherName: Joi.string().max(50),
     motherName: Joi.string().max(50),
     address: Joi.string(),
-    emailVerified: Joi.boolean().default(false),
     isVerified: Joi.boolean().default(false),
   });
 

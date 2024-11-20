@@ -1,57 +1,70 @@
 const userService = require('../services/users.service');
 const commonHelper = require('../helpers/commonFunctions.helper');
 
-async function create(req, res) {
+async function create(req, res, next) {
   try {
     const { body, file, user } = req;
-    const newUser = await userService.create(body, file, user);
-    res.status(201).json(newUser);
+    res.data = await userService.create(body, file, user);
+    res.statusCode = 201;
+    next();
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
   }
 }
 
-async function get(req, res) {
+async function index(req, res, next) {
   try {
     const { query, user } = req;
-    const usersData = await userService.list(query, user);
-    res.status(200).json(usersData);
+    res.data = await userService.index(query, user);
+    res.statusCode = 200;
+    next();
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
   }
 }
 
-async function getById(req, res) {
+async function view(req, res, next) {
   try {
     const { params, user } = req;
-    const userData = await userService.listById(params, user);
+    const { id } = params;
+    const userData = await userService.view(id, user);
     if (!userData) {
-      return res.status(404).json({ message: 'User not found' });
+      res.message = 'User not found';
+      res.statusCode = 404;
+      next();
     }
-    res.status(200).json(userData);
+    res.data = userData;
+    res.statusCode = 200;
+    next();
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
   }
 }
 
-async function updateById(req, res) {
+async function update(req, res, next) {
   try {
     const { params, body, user } = req;
-    const userData = await userService.updateById(params, body, user);
-    res.status(200).json({ userData, message: 'User updated successfully' });
+    const { id } = params;
+    res.data = await userService.update(id, body, user);
+    res.message = 'User updated successfully';
+    res.statusCode = 200;
+    next();
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
   }
 }
 
-async function deleteById(req, res) {
+async function remove(req, res, next) {
   try {
     const { params, user } = req;
-    await userService.deleteById(params.id, user);
-    res.status(204).send({ message: 'user deleted successfully' });
+    const { id } = params;
+    await userService.remove(id, user);
+    res.message = 'user deleted successfully';
+    res.statusCode = 204;
+    next();
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
   }
 }
 
-module.exports = { create, get, getById, updateById, deleteById };
+module.exports = { create, index, view, update, remove };
