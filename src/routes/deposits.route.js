@@ -2,7 +2,7 @@ const express = require('express');
 const authMiddleware = require('../middlewares/auth.middleware');
 const depositValidator = require('../validators/deposits.validator');
 const depositController = require('../controllers/deposits.controller');
-const accountSerialize = require('../serializers/accounts.serializer');
+const accountSerializer = require('../serializers/accounts.serializer');
 const commonHelper = require('../helpers/commonFunctions.helper');
 const constants = require('../constants/constants');
 
@@ -15,7 +15,7 @@ router.post(
   authMiddleware.authorizeRole(constants.ROLES['103']),
   depositValidator.createSchema,
   depositController.create,
-  accountSerialize.serialize,
+  accountSerializer.serialize,
   commonHelper.sendResponse
 );
 

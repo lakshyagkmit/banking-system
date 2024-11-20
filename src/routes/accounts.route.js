@@ -3,7 +3,7 @@ const authMiddleware = require('../middlewares/auth.middleware');
 const commonValidator = require('../validators/commons.validator');
 const accountValidator = require('../validators/accounts.validator');
 const accountController = require('../controllers/accounts.controller');
-const accountSerialize = require('../serializers/accounts.serializer');
+const accountSerializer = require('../serializers/accounts.serializer');
 const transactionValidator = require('../validators/transactions.validator');
 const transactionController = require('../controllers/transactions.controller');
 const transactionSerializer = require('../serializers/policies.serializer');
@@ -20,7 +20,7 @@ router.post(
   authMiddleware.authorizeRole(constants.ROLES['102']),
   accountValidator.createSchema,
   accountController.create,
-  accountSerialize.serialize,
+  accountSerializer.serialize,
   commonHelper.sendResponse
 );
 
@@ -29,7 +29,7 @@ router.get(
   authMiddleware.checkAuthToken,
   commonValidator.querySchema,
   accountController.index,
-  accountSerialize.serialize,
+  accountSerializer.serialize,
   commonHelper.sendResponse
 );
 
@@ -38,7 +38,7 @@ router.get(
   authMiddleware.checkAuthToken,
   commonValidator.idSchema,
   accountController.view,
-  accountSerialize.serialize,
+  accountSerializer.serialize,
   commonHelper.sendResponse
 );
 
@@ -49,7 +49,7 @@ router.put(
   commonValidator.idSchema,
   accountValidator.updateSchema,
   accountController.update,
-  accountSerialize.serialize,
+  accountSerializer.serialize,
   commonHelper.sendResponse
 );
 
@@ -59,7 +59,7 @@ router.delete(
   authMiddleware.authorizeRole(constants.ROLES['102']),
   commonValidator.idSchema,
   accountController.remove,
-  accountSerialize.serialize,
+  accountSerializer.serialize,
   commonHelper.sendResponse
 );
 
@@ -69,7 +69,7 @@ router.post(
   authMiddleware.checkAuthToken,
   authMiddleware.authorizeRole(constants.ROLES['103']),
   accountValidator.idSchema,
-  transactionValidator.transactionSchema,
+  transactionValidator.createSchema,
   transactionController.create
 );
 

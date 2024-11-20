@@ -161,7 +161,7 @@ async function update(id, payload, user) {
       role === constants.ROLES['101'] ||
       (role === constants.ROLES['102'] && userRole === constants.ROLES['103'])
     ) {
-      const data = commonHelper.convertKeysToSnakeCase(payload);
+      const data = await commonHelper.convertKeysToSnakeCase(payload);
 
       const updatedUser = await userToUpdate.update(data, { transaction });
       await transaction.commit();
@@ -181,17 +181,10 @@ async function remove(id, user) {
     const { role } = user;
 
     const userToDelete = await User.findByPk(id, {
-      include: [
-        {
-          model: Role,
-        },
-        {
-          model: Branch,
-        },
-        {
-          model: UserAccount,
-        },
-      ],
+      include: {
+        model: Role,
+        attributes: ['code'],
+      },
     });
 
     if (!userToDelete) {
@@ -200,16 +193,24 @@ async function remove(id, user) {
 
     const userRole = userToDelete.Roles[0].code;
 
-    if (role === constants.ROLES['101'] && userRole === constants.ROLES['102'] && userToDelete.Branch) {
-      return commonHelper.customError('Cannot delete a Branch Manager assigned to a branch', 409);
+    if (userRole === constants.ROLES['102']) {
+      const isManagingBranch = await Branch.findOne({
+        where: { user_id: id },
+      });
+
+      if (isManagingBranch) {
+        return commonHelper.customError('Cannot delete a Branch Manager assigned to a branch', 409);
+      }
     }
 
-    if (
-      (role === constants.ROLES['101'] || role === constants.ROLES['102']) &&
-      userRole === constants.ROLES['103'] &&
-      userToDelete.Account
-    ) {
-      return commonHelper.customError('Cannot delete a customer with an active account', 409);
+    if (userRole === constants.ROLES['103']) {
+      const hasActiveAccounts = await UserAccount.findOne({
+        where: { user_id: id },
+      });
+
+      if (hasActiveAccounts) {
+        return commonHelper.customError('Cannot delete a customer with an active account', 409);
+      }
     }
 
     if (
@@ -219,16 +220,15 @@ async function remove(id, user) {
       await userToDelete.destroy({ transaction });
       await UserRole.destroy(
         {
-          where: {
-            user_id: id,
-          },
+          where: { user_id: id },
         },
         { transaction }
       );
     }
 
     await transaction.commit();
-    return;
+
+    return { message: 'User deleted successfully' };
   } catch (error) {
     await transaction.rollback();
     throw error;

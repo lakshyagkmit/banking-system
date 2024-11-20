@@ -80,7 +80,7 @@ async function update(id, payload) {
       return commonHelper.customError('Policy not found', 404);
     }
 
-    const data = commonHelper.convertKeysToSnakeCase(payload);
+    const data = await commonHelper.convertKeysToSnakeCase(payload);
 
     const updatedPolicy = await policy.update(data, { transaction });
     await transaction.commit();

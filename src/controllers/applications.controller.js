@@ -44,7 +44,6 @@ async function view(req, res, next) {
       res.statusCode = 404;
       next();
     }
-    res.status(200).json(application);
     res.data = application;
     res.statusCode = 201;
     next();

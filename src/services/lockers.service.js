@@ -220,7 +220,7 @@ async function update(id, payload, user) {
       return commonHelper.customError('Locker not found', 404);
     }
 
-    const data = commonHelper.convertKeysToSnakeCase(payload);
+    const data = await commonHelper.convertKeysToSnakeCase(payload);
 
     await locker.update(data, { transaction });
     await transaction.commit();

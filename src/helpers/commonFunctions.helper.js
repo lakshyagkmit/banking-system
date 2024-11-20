@@ -42,13 +42,23 @@ async function sendResponse(req, res) {
 
 async function convertKeysToSnakeCase(obj) {
   if (Array.isArray(obj)) {
-    return obj.map(v => convertKeysToSnakeCase(v));
+    console.error('Unexpected array value in input:', obj);
+    throw new Error('Array values are not allowed');
   } else if (obj !== null && typeof obj === 'object') {
     return Object.keys(obj).reduce((result, key) => {
-      result[_.snakeCase(key)] = convertKeysToSnakeCase(obj[key]);
+      const snakeKey = _.snakeCase(key);
+      const value = obj[key];
+
+      if (typeof value === 'object' && !Array.isArray(value)) {
+        result[snakeKey] = convertKeysToSnakeCase(value);
+      } else {
+        result[snakeKey] = value;
+      }
+
       return result;
     }, {});
   }
+  console.log('Processing primitive value:', obj);
   return obj;
 }
 

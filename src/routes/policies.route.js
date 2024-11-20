@@ -3,7 +3,7 @@ const authMiddleware = require('../middlewares/auth.middleware');
 const commonValidator = require('../validators/commons.validator');
 const policyValidator = require('../validators/policies.validator');
 const policyController = require('../controllers/policies.controller');
-const policySerializer = require('../serializers/lockers.serializer');
+const policySerializer = require('../serializers/policies.serializer');
 const commonHelper = require('../helpers/commonFunctions.helper');
 const constants = require('../constants/constants');
 
@@ -14,7 +14,7 @@ router.post(
   '/',
   authMiddleware.checkAuthToken,
   authMiddleware.authorizeRole(constants.ROLES['101']),
-  policyValidator.createPolicySchema,
+  policyValidator.createSchema,
   policyController.create,
   policySerializer.serialize,
   commonHelper.sendResponse
@@ -45,8 +45,8 @@ router.put(
   authMiddleware.checkAuthToken,
   authMiddleware.authorizeRole(constants.ROLES['101']),
   commonValidator.idSchema,
-  policyValidator.updatePolicySchema,
-  policyController.updat,
+  policyValidator.updateSchema,
+  policyController.update,
   policySerializer.serialize,
   commonHelper.sendResponse
 );

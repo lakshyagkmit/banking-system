@@ -94,6 +94,8 @@ async function create(payload, user) {
       { transaction }
     );
 
+    await application.destroy({ transaction });
+
     await notificationHelper.accountCreationNotification(customer.email, type, accountNumber);
     await transaction.commit();
 

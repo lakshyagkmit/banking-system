@@ -3,7 +3,7 @@ const authMiddleware = require('../middlewares/auth.middleware');
 const branchValidator = require('../validators/branches.validator');
 const commonValidator = require('../validators/commons.validator');
 const branchController = require('../controllers/branches.controller');
-const branchSerialize = require('../serializers/branches.serializer');
+const branchSerializer = require('../serializers/branches.serializer');
 const commonHelper = require('../helpers/commonFunctions.helper');
 const constants = require('../constants/constants');
 
@@ -16,7 +16,7 @@ router.post(
   authMiddleware.authorizeRole(constants.ROLES['101']),
   branchValidator.createSchema,
   branchController.create,
-  branchSerialize.serialize,
+  branchSerializer.serialize,
   commonHelper.sendResponse
 );
 
@@ -26,7 +26,7 @@ router.get(
   authMiddleware.authorizeRole(constants.ROLES['101']),
   commonValidator.querySchema,
   branchController.index,
-  branchSerialize.serialize,
+  branchSerializer.serialize,
   commonHelper.sendResponse
 );
 
@@ -36,7 +36,7 @@ router.get(
   authMiddleware.authorizeRole(constants.ROLES['101']),
   commonValidator.idSchema,
   branchController.view,
-  branchSerialize.serialize,
+  branchSerializer.serialize,
   commonHelper.sendResponse
 );
 
@@ -47,7 +47,7 @@ router.put(
   commonValidator.idSchema,
   branchValidator.updateSchema,
   branchController.update,
-  branchSerialize.serialize,
+  branchSerializer.serialize,
   commonHelper.sendResponse
 );
 
