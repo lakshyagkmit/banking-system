@@ -140,6 +140,7 @@ async function update(id, payload, user) {
   const transaction = await sequelize.transaction();
 
   try {
+    const { name, email, contact, fatherName, motherName, address } = payload;
     const { role } = user;
 
     const userToUpdate = await User.findOne({
@@ -161,9 +162,21 @@ async function update(id, payload, user) {
       role === constants.ROLES['101'] ||
       (role === constants.ROLES['102'] && userRole === constants.ROLES['103'])
     ) {
-      const data = await commonHelper.convertKeysToSnakeCase(payload);
-
-      const updatedUser = await userToUpdate.update(data, { transaction });
+      const updatedUser = await userToUpdate.update(
+        {
+          name,
+          email,
+          password: userToUpdate.password,
+          contact,
+          gov_issue_id_type: userToUpdate.gov_issue_id_type,
+          gov_issue_id_image: userToUpdate.gov_issue_id_image,
+          father_name: fatherName,
+          mother_name: motherName,
+          address,
+          is_verified: userToUpdate.is_verified,
+        },
+        { transaction }
+      );
       await transaction.commit();
 
       return updatedUser;

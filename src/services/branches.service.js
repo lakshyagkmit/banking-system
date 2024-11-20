@@ -93,14 +93,23 @@ async function view(id) {
 async function update(id, payload) {
   const transaction = await sequelize.transaction();
   try {
+    const { userId, address, ifscCode, contact, totalLockers } = payload;
     const branch = await Branch.findByPk(id);
     if (!branch) {
       return commonHelper.customError('Branch not found', 404);
     }
 
-    const data = await commonHelper.convertKeysToSnakeCase(payload);
-
-    const updatedBranch = await branch.update(data, { transaction });
+    const updatedBranch = await branch.update(
+      {
+        bank_id: branch.bank_id,
+        user_id: userId,
+        address,
+        ifsc_code: ifscCode,
+        contact,
+        total_lockers: totalLockers,
+      },
+      { transaction }
+    );
 
     await transaction.commit();
     return updatedBranch;
