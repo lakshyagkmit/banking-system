@@ -1,67 +1,74 @@
 const lockerService = require('../services/lockers.service');
 const commonHelper = require('../helpers/commonFunctions.helper');
 
-async function assign(req, res) {
+async function assign(req, res, next) {
   try {
     const { body, user } = req;
-    const locker = await lockerService.assign(body, user);
-    res.status(200).json(locker);
+    res.data = await lockerService.assign(body, user);
+    res.statusCode = 200;
+    next();
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
   }
 }
 
-async function create(req, res) {
+async function create(req, res, next) {
   try {
     const { body, user } = req;
-    const locker = await lockerService.create(body, user);
-    res.status(201).json(locker);
+    res.data = await lockerService.create(body, user);
+    res.statusCode = 201;
+    next();
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
   }
 }
 
-async function get(req, res) {
+async function index(req, res, next) {
   try {
     const { query, user } = req;
-    const lockers = await lockerService.list(query, user);
-    res.status(200).json(lockers);
+    res.data = await lockerService.index(query, user);
+    res.statusCode = 200;
+    next();
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
   }
 }
 
-async function getById(req, res) {
+async function view(req, res, next) {
   try {
-    const { id } = req.params;
-    const { user } = req;
-    const locker = await lockerService.listById(id, user);
-    res.status(200).json(locker);
+    const { user, params } = req;
+    const { id } = params;
+    res.data = await lockerService.view(id, user);
+    res.statusCode = 200;
+    next();
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
   }
 }
 
-async function updateById(req, res) {
+async function update(req, res, next) {
   try {
-    const { id } = req.params;
-    const { body, user } = req;
-    const locker = await lockerService.updateById(id, body, user);
-    res.status(200).json(locker);
+    const { body, user, params } = req;
+    const { id } = params;
+    res.data = await lockerService.update(id, body, user);
+    res.statusCode = 200;
+    next();
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
   }
 }
 
-async function deleteById(req, res) {
+async function deallocate(req, res, next) {
   try {
-    const { id } = req.params;
-    const { user } = req;
-    await lockerService.deleteById(id, user);
-    res.status(200).json({ message: 'Locker Deallocated successfully' });
+    const { params, user } = req;
+    const { id } = params;
+    await lockerService.deallocate(id, user);
+    res.message = 'Locker Deallocated successfully';
+    res.statusCode = 204;
+    next();
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
   }
 }
 
-module.exports = { assign, create, get, getById, updateById, deleteById };
+module.exports = { assign, create, index, view, update, deallocate };

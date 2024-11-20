@@ -4,6 +4,8 @@ const authMiddleware = require('../middlewares/auth.middleware');
 const lockerValidator = require('../validators/lockers.validator');
 const commonValidator = require('../validators/commons.validator');
 const lockerController = require('../controllers/lockers.controller');
+const lockerSerializer = require('../serializers/lockers.serializer');
+const commonHelper = require('../helpers/commonFunctions.helper');
 const constants = require('../constants/constants');
 
 // Protected Routes
@@ -12,7 +14,8 @@ router.post(
   authMiddleware.checkAuthToken,
   authMiddleware.authorizeRole(constants.ROLES['102']),
   lockerValidator.lockerAssignSchema,
-  lockerController.assign
+  lockerController.assign,
+  commonHelper.sendResponse
 );
 
 router.post(
@@ -20,7 +23,8 @@ router.post(
   authMiddleware.checkAuthToken,
   authMiddleware.authorizeRole(constants.ROLES['102']),
   lockerValidator.createLockerSchema,
-  lockerController.create
+  lockerController.create,
+  commonHelper.sendResponse
 );
 
 router.get(
@@ -28,15 +32,19 @@ router.get(
   authMiddleware.checkAuthToken,
   authMiddleware.authorizeRole([constants.ROLES['102'], constants.ROLES['103']]),
   commonValidator.querySchema,
-  lockerController.get
+  lockerController.index,
+  lockerSerializer.serialize,
+  commonHelper.sendResponse
 );
 
 router.get(
   '/:id',
   authMiddleware.checkAuthToken,
-  authMiddleware.authorizeRole(constants.ROLES['102']),
+  authMiddleware.authorizeRole([constants.ROLES['102'], constants.ROLES['103']]),
   commonValidator.idSchema,
-  lockerController.getById
+  lockerController.view,
+  lockerSerializer.serialize,
+  commonHelper.sendResponse
 );
 
 router.patch(
@@ -45,7 +53,9 @@ router.patch(
   authMiddleware.authorizeRole(constants.ROLES['102']),
   commonValidator.idSchema,
   lockerValidator.updateLockerSchema,
-  lockerController.updateById
+  lockerController.update,
+  lockerSerializer.serialize,
+  commonHelper.sendResponse
 );
 
 router.delete(
@@ -53,7 +63,9 @@ router.delete(
   authMiddleware.checkAuthToken,
   authMiddleware.authorizeRole(constants.ROLES['102']),
   commonValidator.idSchema,
-  lockerController.deleteById
+  lockerController.deallocate,
+  lockerSerializer.serialize,
+  commonHelper.sendResponse
 );
 
 module.exports = router;

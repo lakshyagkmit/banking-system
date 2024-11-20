@@ -1,5 +1,4 @@
-const { Application, Branch, Locker, User, Role, UserLocker, sequelize } = require('../models');
-const { Op } = require('sequelize');
+const { UserApplication, Branch, Locker, User, Role, UserLocker, sequelize } = require('../models');
 const commonHelper = require('../helpers/commonFunctions.helper');
 const notificationHelper = require('../helpers/notifications.helper');
 const constants = require('../constants/constants');
@@ -21,7 +20,7 @@ async function assign(payload, user) {
     });
 
     if (!customer || customer.Roles[0].code !== constants.ROLES['103']) {
-      commonHelper.customError('No user found', 404);
+      return commonHelper.customError('No user found', 404);
     }
 
     const branch = await Branch.findOne({
@@ -31,21 +30,19 @@ async function assign(payload, user) {
     });
 
     if (!branch.available_lockers) {
-      commonHelper.customError('Locker not available', 400);
+      return commonHelper.customError('Locker not available', 400);
     }
 
-    const application = await Application.findOne({
+    const application = await UserApplication.findOne({
       where: {
         user_id: customer.id,
         branch_ifsc_code: branch.ifsc_code,
-        locker_request_desc: {
-          [Op.ne]: null,
-        },
+        type: constants.APPLICATION_TYPES.LOCKER,
       },
     });
 
     if (!application) {
-      commonHelper.customError('No application found, cannot assign a locker to this user', 409);
+      return commonHelper.customError('No application found, cannot assign a locker to this user', 409);
     }
 
     const locker = await Locker.findOne({
@@ -55,7 +52,7 @@ async function assign(payload, user) {
     });
 
     if (!locker || locker.status === 'freezed') {
-      commonHelper.customError('This Locker is freezed', 409);
+      return commonHelper.customError('This Locker is freezed', 409);
     }
 
     const userLocker = await UserLocker.findOne({
@@ -66,7 +63,7 @@ async function assign(payload, user) {
     });
 
     if (userLocker) {
-      commonHelper.customError('User can only have one locker at a time', 409);
+      return commonHelper.customError('User can only have one locker at a time', 409);
     }
 
     await UserLocker.create(
@@ -78,15 +75,10 @@ async function assign(payload, user) {
       { transaction }
     );
 
-    await branch.update({ available_lockers: branch.available_lockers - 1 }, { transaction });
-
     await locker.update({ status: 'freezed' }, { transaction });
-
     await application.destroy({ transaction });
-
-    await transaction.commit();
-
     await notificationHelper.lockerAssignedNotification(email, lockerSerialNo);
+    await transaction.commit();
 
     return { message: 'Locker assigned successfully' };
   } catch (error) {
@@ -109,7 +101,10 @@ async function create(payload, user) {
   });
 
   if (lockerCount + numberOfLockers > branch.total_lockers) {
-    commonHelper.customError('Cannot create lockers more than assigned total lockers in the branch', 409);
+    return commonHelper.customError(
+      'Cannot create lockers more than assigned total lockers in the branch',
+      409
+    );
   }
 
   const lockers = [];
@@ -127,7 +122,7 @@ async function create(payload, user) {
 }
 
 // list lockers based on role
-async function list(query, user) {
+async function index(query, user) {
   const { page, limit } = query;
   const { id, role } = user;
 
@@ -136,6 +131,7 @@ async function list(query, user) {
   let lockers;
   if (role === constants.ROLES['103']) {
     lockers = await Locker.findAndCountAll({
+      where: { status: 'freezed' },
       include: {
         model: User,
         where: { id },
@@ -156,39 +152,50 @@ async function list(query, user) {
   }
 
   if (!lockers.rows.length) {
-    commonHelper.customError('No lockers found', 404);
+    return commonHelper.customError('No lockers found', 404);
   }
 
   return {
     totalItems: lockers.count,
     totalPages: Math.ceil(lockers.count / limit),
     currentPage: page,
-    data: lockers.rows,
+    rows: lockers.rows,
   };
 }
 
 // list a locker by id
-async function listById(id, user) {
-  const branchManagerId = user.id;
+async function view(id, user) {
+  let locker;
+  if (user.role === constants.ROLES['103']) {
+    locker = await Locker.findAndCountAll({
+      where: { id, status: 'freezed' },
+      include: {
+        model: User,
+        where: { id: user.id },
+      },
+    });
+  } else {
+    const branchManagerId = user.id;
 
-  const branch = await Branch.findOne({ where: { user_id: branchManagerId } });
+    const branch = await Branch.findOne({ where: { user_id: branchManagerId } });
 
-  const locker = await Locker.findOne({
-    where: {
-      id,
-      branch_id: branch.id,
-    },
-  });
+    locker = await Locker.findOne({
+      where: {
+        id,
+        branch_id: branch.id,
+      },
+    });
+  }
 
   if (!locker) {
-    commonHelper.customError('Locker not found', 404);
+    return commonHelper.customError('Locker not found', 404);
   }
 
   return locker;
 }
 
 // update a locker
-async function updateById(id, payload, user) {
+async function update(id, payload, user) {
   const transaction = await sequelize.transaction();
 
   try {
@@ -199,7 +206,7 @@ async function updateById(id, payload, user) {
     });
 
     if (!branch) {
-      throw commonHelper.customError('Branch not found', 404);
+      return commonHelper.customError('Branch not found', 404);
     }
 
     const locker = await Locker.findOne({
@@ -210,13 +217,12 @@ async function updateById(id, payload, user) {
     });
 
     if (!locker) {
-      throw commonHelper.customError('Locker not found', 404);
+      return commonHelper.customError('Locker not found', 404);
     }
 
     const data = commonHelper.convertKeysToSnakeCase(payload);
 
     await locker.update(data, { transaction });
-
     await transaction.commit();
 
     return { message: 'Locker updated successfully' };
@@ -227,7 +233,7 @@ async function updateById(id, payload, user) {
 }
 
 // deallocate a locker from customer
-async function deleteById(id, user) {
+async function deallocate(id, user) {
   const transaction = await sequelize.transaction();
 
   try {
@@ -238,7 +244,7 @@ async function deleteById(id, user) {
     });
 
     if (!branch) {
-      throw commonHelper.customError('Branch not found', 404);
+      return commonHelper.customError('Branch not found', 404);
     }
 
     const locker = await Locker.findOne({
@@ -249,7 +255,7 @@ async function deleteById(id, user) {
     });
 
     if (!locker) {
-      throw commonHelper.customError('Locker not found', 404);
+      return commonHelper.customError('Locker not found', 404);
     }
 
     const userLocker = await UserLocker.findOne({
@@ -261,12 +267,11 @@ async function deleteById(id, user) {
     });
 
     if (!userLocker || locker.status === 'available') {
-      throw commonHelper.customError('Locker is not currently assigned', 400);
+      return commonHelper.customError('Locker is not currently assigned', 400);
     }
 
     await locker.update({ status: 'available' }, { transaction });
     await userLocker.update({ status: 'inactive' }, { transaction });
-
     await transaction.commit();
 
     return { message: 'Locker deallocated successfully' };
@@ -276,4 +281,4 @@ async function deleteById(id, user) {
   }
 }
 
-module.exports = { assign, create, list, listById, updateById, deleteById };
+module.exports = { assign, create, index, view, update, deallocate };
