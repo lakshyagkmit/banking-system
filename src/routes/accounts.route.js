@@ -6,6 +6,7 @@ const accountController = require('../controllers/accounts.controller');
 const accountSerialize = require('../serializers/accounts.serializer');
 const transactionValidator = require('../validators/transactions.validator');
 const transactionController = require('../controllers/transactions.controller');
+const transactionSerializer = require('../serializers/policies.serializer');
 const commonHelper = require('../helpers/commonFunctions.helper');
 const constants = require('../constants/constants');
 
@@ -67,24 +68,30 @@ router.post(
   '/:accountId/transactions',
   authMiddleware.checkAuthToken,
   authMiddleware.authorizeRole(constants.ROLES['103']),
+  accountValidator.idSchema,
   transactionValidator.transactionSchema,
   transactionController.create
 );
 
-router.post(
+router.get(
   '/:accountId/transactions',
   authMiddleware.checkAuthToken,
   authMiddleware.authorizeRole([constants.ROLES['102'], constants.ROLES['103']]),
+  accountValidator.idSchema,
   commonValidator.querySchema,
-  transactionController.get
+  transactionController.index,
+  transactionSerializer.serialize,
+  commonHelper.sendResponse
 );
 
-router.post(
+router.get(
   '/:accountId/transactions/:transactionId',
   authMiddleware.checkAuthToken,
   authMiddleware.authorizeRole([constants.ROLES['102'], constants.ROLES['103']]),
-  commonValidator.idSchema,
-  transactionController.getById
+  accountValidator.idSchema,
+  transactionController.view,
+  transactionSerializer.serialize,
+  commonHelper.sendResponse
 );
 
 module.exports = router;

@@ -1,44 +1,40 @@
 const transactionService = require('../services/transactions.service');
 const commonHelper = require('../helpers/commonFunctions.helper');
 
-async function create(req, res) {
+async function create(req, res, next) {
   try {
     const { params, body, user } = req;
-    const transaction = await transactionService.create(params, body, user);
-    res.status(201).json(transaction);
+    const { accountId } = params;
+    res.data = await transactionService.create(accountId, body, user);
+    res.statusCode = 201;
+    next();
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
   }
 }
 
-const get = async (req, res) => {
+async function index(req, res, next) {
   try {
-    const { accountId } = req.params;
-    const { query, user } = req;
-
-    const transactions = await transactionService.getTransactions(accountId, query, user);
-
-    return res.status(200).json({
-      transactions,
-    });
+    const { params, query, user } = req;
+    const { accountId } = params;
+    res.data = await transactionService.index(accountId, query, user);
+    res.statusCode = 200;
+    next();
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
   }
-};
+}
 
-const getById = async (req, res) => {
+async function view(req, res, next) {
   try {
-    const { accountId, transactionId } = req.params;
-    const { user } = req;
-
-    const transaction = await transactionService.getTransactionById(accountId, transactionId, user);
-
-    return res.status(200).json({
-      transaction,
-    });
+    const { params, user } = req;
+    const { accountId, transactionId } = params;
+    res.data = await transactionService.view(accountId, transactionId, user);
+    res.statusCode = 200;
+    next();
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
   }
-};
+}
 
-module.exports = { create, get, getById };
+module.exports = { create, index, view };
