@@ -28,10 +28,12 @@ module.exports = (sequelize, DataTypes) => {
       type: {
         type: DataTypes.ENUM('withdrawal', 'deposit', 'transfer'),
         allowNull: false,
+        defaultValue: 'withdrawal',
       },
       payment_method: {
         type: DataTypes.ENUM('Credit_Card', 'Debit_Card', 'NEFT', 'RTGS', 'IMPS', 'UPI'),
         allowNull: false,
+        defaultValue: 'Debit_Card',
       },
       amount: {
         type: DataTypes.DECIMAL(20, 2),
@@ -52,6 +54,7 @@ module.exports = (sequelize, DataTypes) => {
       status: {
         type: DataTypes.ENUM('completed', 'pending', 'failed'),
         allowNull: false,
+        defaultValue: 'pending',
       },
     },
     {

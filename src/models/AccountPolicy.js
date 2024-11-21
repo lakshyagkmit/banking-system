@@ -25,6 +25,7 @@ module.exports = (sequelize, DataTypes) => {
       account_type: {
         type: DataTypes.ENUM('savings', 'current', 'fixed', 'recurring'),
         allowNull: false,
+        defaultValue: 'savings',
       },
       initial_amount: {
         type: DataTypes.DECIMAL(20, 2),

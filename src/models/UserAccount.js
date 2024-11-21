@@ -43,6 +43,7 @@ module.exports = (sequelize, DataTypes) => {
       type: {
         type: DataTypes.ENUM('savings', 'current', 'fixed', 'recurring'),
         allowNull: false,
+        defaultValue: 'savings',
       },
       number: {
         type: DataTypes.STRING(20),

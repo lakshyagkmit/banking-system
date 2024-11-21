@@ -30,6 +30,7 @@ module.exports = {
       status: {
         type: Sequelize.ENUM('available', 'freezed'),
         allowNull: false,
+        defaultValue: 'available',
       },
       created_at: {
         allowNull: false,
