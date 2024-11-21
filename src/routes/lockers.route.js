@@ -6,13 +6,13 @@ const commonValidator = require('../validators/commons.validator');
 const lockerController = require('../controllers/lockers.controller');
 const lockerSerializer = require('../serializers/lockers.serializer');
 const commonHelper = require('../helpers/commonFunctions.helper');
-const constants = require('../constants/constants');
+const { ROLES } = require('../constants/constants');
 
 // Protected Routes
 router.post(
   '/assign',
   authMiddleware.checkAuthToken,
-  authMiddleware.authorizeRole(constants.ROLES['102']),
+  authMiddleware.authorizeRole(ROLES['102']),
   lockerValidator.assignSchema,
   lockerController.assign,
   commonHelper.sendResponse
@@ -21,7 +21,7 @@ router.post(
 router.post(
   '/',
   authMiddleware.checkAuthToken,
-  authMiddleware.authorizeRole(constants.ROLES['102']),
+  authMiddleware.authorizeRole(ROLES['102']),
   lockerValidator.createSchema,
   lockerController.create,
   commonHelper.sendResponse
@@ -30,7 +30,7 @@ router.post(
 router.get(
   '/',
   authMiddleware.checkAuthToken,
-  authMiddleware.authorizeRole([constants.ROLES['102'], constants.ROLES['103']]),
+  authMiddleware.authorizeRole([ROLES['102'], ROLES['103']]),
   commonValidator.querySchema,
   lockerController.index,
   lockerSerializer.serialize,
@@ -40,7 +40,7 @@ router.get(
 router.get(
   '/:id',
   authMiddleware.checkAuthToken,
-  authMiddleware.authorizeRole([constants.ROLES['102'], constants.ROLES['103']]),
+  authMiddleware.authorizeRole([ROLES['102'], ROLES['103']]),
   commonValidator.idSchema,
   lockerController.view,
   lockerSerializer.serialize,
@@ -50,21 +50,19 @@ router.get(
 router.patch(
   '/:id',
   authMiddleware.checkAuthToken,
-  authMiddleware.authorizeRole(constants.ROLES['102']),
+  authMiddleware.authorizeRole(ROLES['102']),
   commonValidator.idSchema,
   lockerValidator.updateSchema,
   lockerController.update,
-  lockerSerializer.serialize,
   commonHelper.sendResponse
 );
 
 router.delete(
   '/:id',
   authMiddleware.checkAuthToken,
-  authMiddleware.authorizeRole(constants.ROLES['102']),
+  authMiddleware.authorizeRole(ROLES['102']),
   commonValidator.idSchema,
   lockerController.deallocate,
-  lockerSerializer.serialize,
   commonHelper.sendResponse
 );
 

@@ -5,7 +5,7 @@ const commonValidator = require('../validators/commons.validator');
 const branchController = require('../controllers/branches.controller');
 const branchSerializer = require('../serializers/branches.serializer');
 const commonHelper = require('../helpers/commonFunctions.helper');
-const constants = require('../constants/constants');
+const { ROLES } = require('../constants/constants');
 
 const router = express.Router();
 
@@ -13,8 +13,8 @@ const router = express.Router();
 router.post(
   '/',
   authMiddleware.checkAuthToken,
-  authMiddleware.authorizeRole(constants.ROLES['101']),
-  branchValidator.branchSchema,
+  authMiddleware.authorizeRole(ROLES['101']),
+  branchValidator.createSchema,
   branchController.create,
   branchSerializer.serialize,
   commonHelper.sendResponse
@@ -23,7 +23,7 @@ router.post(
 router.get(
   '/',
   authMiddleware.checkAuthToken,
-  authMiddleware.authorizeRole(constants.ROLES['101']),
+  authMiddleware.authorizeRole(ROLES['101']),
   commonValidator.querySchema,
   branchController.index,
   branchSerializer.serialize,
@@ -33,7 +33,7 @@ router.get(
 router.get(
   '/:id',
   authMiddleware.checkAuthToken,
-  authMiddleware.authorizeRole(constants.ROLES['101']),
+  authMiddleware.authorizeRole(ROLES['101']),
   commonValidator.idSchema,
   branchController.view,
   branchSerializer.serialize,
@@ -43,9 +43,9 @@ router.get(
 router.put(
   '/:id',
   authMiddleware.checkAuthToken,
-  authMiddleware.authorizeRole(constants.ROLES['101']),
+  authMiddleware.authorizeRole(ROLES['101']),
   commonValidator.idSchema,
-  branchValidator.branchSchema,
+  branchValidator.updateSchema,
   branchController.update,
   branchSerializer.serialize,
   commonHelper.sendResponse
