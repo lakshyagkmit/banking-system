@@ -26,13 +26,7 @@ async function index(req, res, next) {
 async function view(req, res, next) {
   try {
     const { id } = req.params;
-    const branch = await branchService.view(id);
-    if (!branch) {
-      res.message = 'Branch not found';
-      res.statusCode = 404;
-      return next();
-    }
-    res.data = branch;
+    res.data = await branchService.view(id);
     res.statusCode = 200;
     next();
   } catch (error) {

@@ -28,7 +28,7 @@ async function login(req, res, next) {
   try {
     const { email } = req.body;
     await authService.login(email);
-    res.message = 'OTP Sent on email';
+    res.message = 'OTP sent on email';
     res.statusCode = 200;
     next();
   } catch (error) {
@@ -40,7 +40,7 @@ async function verifyOtp(req, res, next) {
   try {
     const { email, otp } = req.body;
     res.token = await authService.verifyOtp(email, otp);
-    res.message = 'OTP Sent on email';
+    res.message = 'OTP sent on email';
     res.statusCode = 200;
     next();
   } catch (error) {
@@ -52,7 +52,7 @@ async function resendOtp(req, res, next) {
   try {
     const { email } = req.body;
     await authService.resendOtp(email);
-    res.message = 'OTP Resent to email';
+    res.message = 'OTP resent to email';
     res.statusCode = 200;
     next();
   } catch (error) {
