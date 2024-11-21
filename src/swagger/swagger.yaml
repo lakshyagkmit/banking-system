@@ -1,0 +1,873 @@
+openapi: 3.0.0
+info:
+  title: Banking System
+  description: >-
+    **Banking System APIs** 
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000/api
+components:
+  securitySchemes:
+    noauthAuth:
+      type: http
+      scheme: noauth
+    bearerAuth:
+      type: http
+      scheme: bearer
+security:
+  - bearerAuth: []
+tags:
+  - name: Auth
+    description: >-
+      ### **1\. Authentication Routes**
+  - name: Users
+    description: >-
+      ### **2\. User Routes**
+  - name: Branches
+    description: >-
+      ### **3\. Branch Routes**
+  - name: Policies
+    description: >-
+      ### **4\. Policies Routes**
+  - name: Accounts
+    description: >-
+      ### **5\. Account Management Routes**
+  - name: Accounts > Transactions
+    description: >-
+      ### **6\. Transaction Routes**
+  - name: Applications
+    description: >-
+      ### **7\. Application Routes**
+  - name: Lockers
+    description: >-
+      ### **8\. Locker Management Routes**
+  - name: Deposits
+    description: >-
+      ### **9\. Deposit Routes**
+paths:
+  /auth/otp-login:
+    post:
+      tags:
+        - Auth
+      summary: login user with otp
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              example:
+                email: lakshya26@gmail.com
+      security:
+        - noauthAuth: []
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+  /auth/otp-verify:
+    post:
+      tags:
+        - Auth
+      summary: verify user's otp
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              example:
+                email: 'asdfg@gmail.com'
+                otp: '454053'
+      security:
+        - noauthAuth: []
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+  /auth/logout:
+    delete:
+      tags:
+        - Auth
+      summary: logout user
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+  /auth/register:
+    post:
+      tags:
+        - Auth
+      summary: register a new customer
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: Abha
+                email:
+                  type: string
+                  example: lakshya10@gmail.com
+                password:
+                  type: integer
+                  example: '876543653'
+                contact:
+                  type: integer
+                  example: '7890122232'
+                govIssueIdType:
+                  type: string
+                  example: adhar
+                govIssueIdImage:
+                  type: string
+                  format: binary
+                fatherName:
+                  type: string
+                  example: Abhay
+                motherName:
+                  type: string
+                  example: Rani
+                address:
+                  type: string
+                  example: Rajasthan, India
+      security:
+        - noauthAuth: []
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+  /auth/verify-email:
+    post:
+      tags:
+        - Auth
+      summary: verify email
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              example:
+                email: 'asdfgh@gmail.com'
+                otp: ''
+      security:
+        - noauthAuth: []
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+  /auth/otp-resend:
+    post:
+      tags:
+        - Auth
+      summary: resend otp
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              example:
+                email: lakshyasingh24@gmail.com
+      security:
+        - noauthAuth: []
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+  /users:
+    post:
+      tags:
+        - Users
+      summary: create user
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: Vinay
+                email:
+                  type: string
+                  example: lakshya116@gmail.com
+                password:
+                  type: integer
+                  example: '12345675'
+                contact:
+                  type: integer
+                  example: '1234567111'
+                govIssueIdType:
+                  type: string
+                  example: adhar
+                govIssueIdImage:
+                  type: string
+                  format: binary
+                fatherName:
+                  type: string
+                  example: Vasudev Purohit
+                motherName:
+                  type: string
+                  example: Chanda Purohit
+                address:
+                  type: string
+                  example: Udaipur
+                isVerified:
+                  type: boolean
+                  example: 'true'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+    get:
+      tags:
+        - Users
+      summary: index users
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+          example: '2'
+        - name: limit
+          in: query
+          schema:
+            type: integer
+          example: '10'
+        - name: userRole
+          in: query
+          schema:
+            type: integer
+          example: '102'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+  /users/{id}:
+    get:
+      tags:
+        - Users
+      summary: view user
+      parameters:
+        - name: id
+          in: path
+          schema:
+            type: string
+          required: true
+          example: bab3a2ab-7fdb-45de-963e-93fed16a2ed7
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+    put:
+      tags:
+        - Users
+      summary: update user
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              example:
+                name: Vina
+                email: lakshya206@gmail.com
+                contact: '1234561111'
+                fatherName: Rama
+                motherName: Maya
+                address: Kolkata India
+      parameters:
+        - name: id
+          in: path
+          schema:
+            type: string
+          required: true
+          example: 61f3de98-16f1-45a3-a95a-09672d9404d8
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+    delete:
+      tags:
+        - Users
+      summary: delete user
+      parameters:
+        - name: id
+          in: path
+          schema:
+            type: string
+          required: true
+          example: 61f3de98-16f1-45a3-a95a-09672d9404d8
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+  /branches:
+    post:
+      tags:
+        - Branches
+      summary: create branch
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              example:
+                userId: 56bc2f56-1180-41e3-93a0-780b6e866201
+                address: Uttrakhand India
+                ifscCode: k01342457
+                contact: 1800 400 202
+                totalLockers: 10
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+    get:
+      tags:
+        - Branches
+      summary: index branches
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+          example: '2'
+        - name: limit
+          in: query
+          schema:
+            type: integer
+          example: '10'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+  /branches/{id}:
+    get:
+      tags:
+        - Branches
+      summary: view branch
+      parameters:
+        - name: id
+          in: path
+          schema:
+            type: string
+          required: true
+          example: 94267363-1ed6-4665-94e6-3302f8834e24
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+    put:
+      tags:
+        - Branches
+      summary: update branch
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              example:
+                address: Delhi India
+                totalLockers: 14
+      parameters:
+        - name: id
+          in: path
+          schema:
+            type: string
+          required: true
+          example: 94267363-1ed6-4665-94e6-3302f8834e24
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+  /policies:
+    post:
+      tags:
+        - Policies
+      summary: create policy
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              example:
+                accountType: savings
+                initialAmount: 1000
+                interestRate: 10
+                minimumAmount: 1000
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+    get:
+      tags:
+        - Policies
+      summary: index policies
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+          example: '2'
+        - name: limit
+          in: query
+          schema:
+            type: integer
+          example: '10'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+  /policies/{id}:
+    get:
+      tags:
+        - Policies
+      summary: view policy
+      parameters:
+        - name: id
+          in: path
+          schema:
+            type: string
+          required: true
+          example: e3f8ea87-dd89-4fc1-a97d-c81e67332274
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+    patch:
+      tags:
+        - Policies
+      summary: update policy
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              example:
+                interestRate: 6
+                penaltyFee: 100
+      parameters:
+        - name: id
+          in: path
+          schema:
+            type: string
+          required: true
+          example: e3f8ea87-dd89-4fc1-a97d-c81e67332274
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+    delete:
+      tags:
+        - Policies
+      summary: delete policy
+      parameters:
+        - name: id
+          in: path
+          schema:
+            type: string
+          required: true
+          example: e3f8ea87-dd89-4fc1-a97d-c81e67332274
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+  /accounts/{accountId}/transactions:
+    post:
+      tags:
+        - Accounts > Transactions
+      summary: create transaction
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              example:
+                accountNo: '2530012137351437'
+                type: transfer
+                paymentMethod: UPI
+                amount: 1000
+      parameters:
+        - name: accountId
+          in: path
+          schema:
+            type: string
+          required: true
+          example: 62e03094-397f-4e31-b068-cdd0a5ca231b
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+    get:
+      tags:
+        - Accounts > Transactions
+      summary: index transactions
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+          example: '2'
+        - name: limit
+          in: query
+          schema:
+            type: integer
+          example: '10'
+        - name: accountId
+          in: path
+          schema:
+            type: string
+          required: true
+          example: 62e03094-397f-4e31-b068-cdd0a5ca231b
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+  /accounts/{accountId}/transactions/{transactionId}:
+    get:
+      tags:
+        - Accounts > Transactions
+      summary: view transaction
+      parameters:
+        - name: accountId
+          in: path
+          schema:
+            type: string
+          required: true
+          example: 62e03094-397f-4e31-b068-cdd0a5ca231b
+        - name: transactionId
+          in: path
+          schema:
+            type: string
+          required: true
+          example: d5595f34-85d8-43ea-a892-e6978142c61e
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+  /accounts:
+    post:
+      tags:
+        - Accounts
+      summary: create account
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              example:
+                userId: e66524db-81e6-4dd8-b78a-aa17932f3f5f
+                type: current
+                nominee: Raja
+                branchIfscCode: k01342456
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+    get:
+      tags:
+        - Accounts
+      summary: index accounts
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+          example: '2'
+        - name: limit
+          in: query
+          schema:
+            type: integer
+          example: '10'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+  /accounts/{id}:
+    get:
+      tags:
+        - Accounts
+      summary: view account
+      parameters:
+        - name: id
+          in: path
+          schema:
+            type: string
+          required: true
+          example: 5ed5eb02-2a06-48f6-b778-3c74e8f6ac83
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+    patch:
+      tags:
+        - Accounts
+      summary: update account
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              example:
+                nominee: Mayya
+      parameters:
+        - name: id
+          in: path
+          schema:
+            type: string
+          required: true
+          example: 5ed5eb02-2a06-48f6-b778-3c74e8f6ac83
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+    delete:
+      tags:
+        - Accounts
+      summary: delete account
+      parameters:
+        - name: id
+          in: path
+          schema:
+            type: string
+          required: true
+          example: 3964f2d1-2173-4fd0-8ce0-ab7789c6ca0c
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+  /applications/accounts:
+    post:
+      tags:
+        - Applications
+      summary: request account
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              example:
+                branchIfscCode: k01342456
+                type: current
+                nomineeName: Raja
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+  /applications/lockers:
+    post:
+      tags:
+        - Applications
+      summary: request locker
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              example:
+                type: locker
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+  /applications:
+    get:
+      tags:
+        - Applications
+      summary: list applications
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+          example: '2'
+        - name: limit
+          in: query
+          schema:
+            type: integer
+          example: '10'
+        - name: requestType
+          in: query
+          schema:
+            type: string
+          example: accounts
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+  /applications/{id}:
+    get:
+      tags:
+        - Applications
+      summary: list application by id
+      parameters:
+        - name: id
+          in: path
+          schema:
+            type: string
+          required: true
+          example: b2674fda-272c-4688-93ef-63443eba70c7
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+  /lockers/assign:
+    post:
+      tags:
+        - Lockers
+      summary: assign a locker
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              example:
+                email: lakshyarajput25@gmail.com
+                lockerSerialNo: '6'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+  /lockers:
+    post:
+      tags:
+        - Lockers
+      summary: create locker
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              example:
+                numberOfLockers: 10
+                monthlyCharge: 1500
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+    get:
+      tags:
+        - Lockers
+      summary: index lockers
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+          example: '2'
+        - name: limit
+          in: query
+          schema:
+            type: integer
+          example: '10'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+  /lockers/{id}:
+    get:
+      tags:
+        - Lockers
+      summary: view locker
+      parameters:
+        - name: id
+          in: path
+          schema:
+            type: string
+          required: true
+          example: dc77c525-d4dc-4346-91b6-8142fd54004c
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+    patch:
+      tags:
+        - Lockers
+      summary: update locker
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              example:
+                monthlyCharge: 1600
+      parameters:
+        - name: id
+          in: path
+          schema:
+            type: string
+          required: true
+          example: 3fbda4e0-6c95-42ad-bd25-50952ba5d187
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+    delete:
+      tags:
+        - Lockers
+      summary: deallocate locker
+      parameters:
+        - name: id
+          in: path
+          schema:
+            type: string
+          required: true
+          example: dc77c525-d4dc-4346-91b6-8142fd54004c
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+  /deposits:
+    post:
+      tags:
+        - Deposits
+      summary: create a deposit account
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              example:
+                type: fixed
+                nominee: Rama
+                principleAmount: 100000
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
