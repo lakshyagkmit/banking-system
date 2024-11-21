@@ -1,12 +1,12 @@
 const serialize = (req, res, next) => {
-  let { rows } = res.data;
+  let { branches } = res.data;
   let response = [];
 
-  if (!rows) {
-    rows = [res.data];
+  if (!branches) {
+    branches = [res.data];
   }
 
-  for (const branch of rows) {
+  for (const branch of branches) {
     const data = {};
     data.id = branch.id;
     data.bankId = branch.bank_id;
@@ -15,14 +15,16 @@ const serialize = (req, res, next) => {
     data.ifscCode = branch.ifsc_code;
     data.contact = branch.contact;
     data.totalLockers = branch.total_lockers;
+    data.createdAt = branch.created_at;
+    data.updatedAt = branch.updated_at;
 
     response.push(data);
   }
 
-  if (!res.data.rows) {
+  if (!res.data.branches) {
     res.data = response[0];
   } else {
-    res.data.rows = response;
+    res.data.branches = response;
   }
 
   next();

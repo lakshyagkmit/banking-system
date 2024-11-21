@@ -1,12 +1,12 @@
 const serialize = (req, res, next) => {
-  let { rows } = res.data;
+  let { users } = res.data;
   let response = [];
 
-  if (!rows) {
-    rows = [res.data];
+  if (!users) {
+    users = [res.data];
   }
 
-  for (const user of rows) {
+  for (const user of users) {
     const data = {};
     data.id = user.id;
     data.name = user.name;
@@ -17,22 +17,26 @@ const serialize = (req, res, next) => {
     data.fatherName = user.father_name;
     data.motherName = user.mother_name;
     data.address = user.address;
+    data.createdAt = user.created_at;
+    data.updatedAt = user.updated_at;
 
     if (user.Roles) {
       data.roles = user.Roles.map(role => ({
         id: role.id,
         name: role.name,
         code: role.code,
+        createdAt: role.created_at,
+        updatedAt: role.updated_at,
       }));
     }
 
     response.push(data);
   }
 
-  if (!res.data.rows) {
+  if (!res.data.users) {
     res.data = response[0];
   } else {
-    res.data.rows = response;
+    res.data.users = response;
   }
 
   next();

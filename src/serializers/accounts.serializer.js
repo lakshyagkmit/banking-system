@@ -1,13 +1,12 @@
 const serialize = (req, res, next) => {
-  let { rows } = res.data || {};
+  let { accounts } = res.data || {};
   let response = [];
 
-  // Ensure rows is an array
-  if (!rows) {
-    rows = [res.data];
+  if (!accounts) {
+    accounts = [res.data];
   }
 
-  for (const account of rows) {
+  for (const account of accounts) {
     const data = {};
     data.id = account.id;
     data.policyId = account.policy_id;
@@ -22,6 +21,8 @@ const serialize = (req, res, next) => {
     if (account.principle_amount) data.principleAmount = account.principle_amount;
     if (account.maturity_date) data.maturityDate = account.maturity_date;
     data.status = account.status;
+    data.createdAt = account.created_at;
+    data.updatedAt = account.updated_at;
 
     if (account.User) {
       data.user = {
@@ -34,6 +35,8 @@ const serialize = (req, res, next) => {
         fatherName: account.User.father_name,
         motherName: account.User.mother_name,
         address: account.User.address,
+        createdAt: account.User.created_at,
+        updatedAt: account.User.updated_at,
       };
     }
 
@@ -46,16 +49,18 @@ const serialize = (req, res, next) => {
         ifscCode: account.Branch.ifsc_code,
         contact: account.Branch.contact,
         totalLockers: account.Branch.total_lockers,
+        createdAt: account.Branch.created_at,
+        updatedAt: account.Branch.updated_at,
       };
     }
 
     response.push(data);
   }
 
-  if (!res.data.rows) {
+  if (!res.data.accounts) {
     res.data = response[0];
   } else {
-    res.data.rows = response;
+    res.data.accounts = response;
   }
 
   next();
