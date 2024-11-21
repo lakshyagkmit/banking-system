@@ -28,7 +28,6 @@ module.exports = (sequelize, DataTypes) => {
       type: {
         type: DataTypes.ENUM('withdrawal', 'deposit', 'transfer'),
         allowNull: false,
-        defaultValue: 'withdrawal',
       },
       payment_method: {
         type: DataTypes.ENUM('Credit_Card', 'Debit_Card', 'NEFT', 'RTGS', 'IMPS', 'UPI'),

@@ -20,7 +20,6 @@ module.exports = {
       },
       serial_no: {
         type: Sequelize.STRING(20),
-        unique: true,
         allowNull: false,
       },
       monthly_charge: {
