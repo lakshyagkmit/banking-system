@@ -30,6 +30,7 @@ module.exports = {
       },
       gov_issue_id_type: {
         type: Sequelize.ENUM('passport', 'adhar', 'pan', 'voter_id', 'driver_license'),
+        defaultValue: 'adhar',
       },
       gov_issue_id_image: {
         type: Sequelize.TEXT,

@@ -28,6 +28,7 @@ module.exports = {
       payment_method: {
         type: Sequelize.ENUM('Credit_Card', 'Debit_Card', 'NEFT', 'RTGS', 'IMPS', 'UPI'),
         allowNull: false,
+        defaultValue: 'Debit_Card',
       },
       amount: {
         type: Sequelize.DECIMAL(20, 2),
@@ -48,6 +49,7 @@ module.exports = {
       status: {
         type: Sequelize.ENUM('completed', 'pending', 'failed'),
         allowNull: false,
+        defaultValue: 'pending',
       },
       created_at: {
         allowNull: false,

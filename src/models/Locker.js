@@ -29,7 +29,6 @@ module.exports = (sequelize, DataTypes) => {
       },
       serial_no: {
         type: DataTypes.STRING(20),
-        unique: true,
         allowNull: false,
       },
       monthly_charge: {
@@ -39,6 +38,7 @@ module.exports = (sequelize, DataTypes) => {
       status: {
         type: DataTypes.ENUM('available', 'freezed'),
         allowNull: false,
+        defaultValue: 'available',
       },
     },
     {

@@ -25,6 +25,7 @@ module.exports = {
       type: {
         type: Sequelize.ENUM('savings', 'current', 'fixed', 'recurring', 'locker'),
         allowNull: false,
+        defaultValue: 'savings',
       },
       nominee_name: {
         type: Sequelize.STRING(50),
