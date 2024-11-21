@@ -27,13 +27,7 @@ async function view(req, res, next) {
   try {
     const { params, user } = req;
     const { id } = params;
-    const account = await accountService.view(id, user);
-    if (!account) {
-      res.message = 'User not found';
-      res.statusCode = 404;
-      return next();
-    }
-    res.data = account;
+    res.data = await accountService.view(id, user);
     res.statusCode = 200;
     next();
   } catch (error) {

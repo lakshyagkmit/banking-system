@@ -38,13 +38,7 @@ async function view(req, res, next) {
   try {
     const { params, user } = req;
     const { id } = params;
-    const application = await applicationService.view(id, user);
-    if (!application) {
-      res.message = 'Application not found';
-      res.statusCode = 404;
-      return next();
-    }
-    res.data = application;
+    res.data = await applicationService.view(id, user);
     res.statusCode = 201;
     next();
   } catch (error) {

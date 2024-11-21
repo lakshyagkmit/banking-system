@@ -20,7 +20,7 @@ async function customErrorHandler(req, res, message, statusCode = 400, error = n
   res.status(statusCode).json(response);
 }
 
-async function customError(message, statusCode) {
+async function customError(message, statusCode = 400) {
   const error = new Error(message);
   error.statusCode = statusCode;
   throw error;

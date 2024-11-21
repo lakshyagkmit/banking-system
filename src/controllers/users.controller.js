@@ -27,13 +27,7 @@ async function view(req, res, next) {
   try {
     const { params, user } = req;
     const { id } = params;
-    const userData = await userService.view(id, user);
-    if (!userData) {
-      res.message = 'User not found';
-      res.statusCode = 404;
-      return next();
-    }
-    res.data = userData;
+    res.data = await userService.view(id, user);
     res.statusCode = 200;
     next();
   } catch (error) {
