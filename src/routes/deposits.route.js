@@ -4,7 +4,7 @@ const depositValidator = require('../validators/deposits.validator');
 const depositController = require('../controllers/deposits.controller');
 const accountSerializer = require('../serializers/accounts.serializer');
 const commonHelper = require('../helpers/commonFunctions.helper');
-const constants = require('../constants/constants');
+const { ROLES } = require('../constants/constants');
 
 const router = express.Router();
 
@@ -12,7 +12,7 @@ const router = express.Router();
 router.post(
   '/',
   authMiddleware.checkAuthToken,
-  authMiddleware.authorizeRole(constants.ROLES['103']),
+  authMiddleware.authorizeRole(ROLES['103']),
   depositValidator.createSchema,
   depositController.create,
   accountSerializer.serialize,

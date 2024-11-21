@@ -7,12 +7,12 @@ const commonValidator = require('../validators/commons.validator');
 const userController = require('../controllers/users.controller');
 const userSerializer = require('../serializers/users.serializer');
 const commonHelper = require('../helpers/commonFunctions.helper');
-const constants = require('../constants/constants');
+const { ROLES } = require('../constants/constants');
 
 router.post(
   '/',
   authMiddleware.checkAuthToken,
-  authMiddleware.authorizeRole([constants.ROLES['101'], constants.ROLES['102']]),
+  authMiddleware.authorizeRole([ROLES['101'], ROLES['102']]),
   multerMiddleware.upload.single('govIssueIdImage'),
   userValidator.createSchema,
   userController.create,
@@ -23,7 +23,7 @@ router.post(
 router.get(
   '/',
   authMiddleware.checkAuthToken,
-  authMiddleware.authorizeRole([constants.ROLES['101'], constants.ROLES['102']]),
+  authMiddleware.authorizeRole([ROLES['101'], ROLES['102']]),
   commonValidator.querySchema,
   userController.index,
   userSerializer.serialize,
@@ -42,7 +42,7 @@ router.get(
 router.put(
   '/:id',
   authMiddleware.checkAuthToken,
-  authMiddleware.authorizeRole([constants.ROLES['101'], constants.ROLES['102']]),
+  authMiddleware.authorizeRole([ROLES['101'], ROLES['102']]),
   commonValidator.idSchema,
   userValidator.updateSchema,
   userController.update,
@@ -53,7 +53,7 @@ router.put(
 router.delete(
   '/:id',
   authMiddleware.checkAuthToken,
-  authMiddleware.authorizeRole([constants.ROLES['101'], constants.ROLES['102']]),
+  authMiddleware.authorizeRole([ROLES['101'], ROLES['102']]),
   commonValidator.idSchema,
   userController.remove,
   commonHelper.sendResponse

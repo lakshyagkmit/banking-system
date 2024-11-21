@@ -29,12 +29,14 @@ const GOV_ISSUE_ID_TYPES = Object.freeze({
   VOTER_ID: 'voter_id',
 });
 
-const TRANSACTION_TYPES = Object.freeze({
-  WITHDRAWL: 'withdrawal',
+// Constants for transaction types
+const TRANSACTION_TYPES = {
+  WITHDRAWAL: 'withdrawal',
   DEPOSIT: 'deposit',
   TRANSFER: 'transfer',
-});
+};
 
+// Constants for payment methods
 const PAYMENT_METHODS = Object.freeze({
   CREDIT_CARD: 'Credit_Card',
   DEBIT_CARD: 'Debit_Card',
@@ -44,6 +46,24 @@ const PAYMENT_METHODS = Object.freeze({
   UPI: 'UPI',
 });
 
+// Constants for transaction status
+const TRANSACTION_STATUS = Object.freeze({
+  COMPLETED: 'completed',
+  PENDING: 'pending',
+  FAILED: 'failed',
+});
+
+// constants for status
+const STATUS = {
+  ACTIVE: 'active',
+  INACTIVE: 'inactive',
+};
+
+const LOCKER_STATUS = {
+  AVAILABLE: 'available',
+  FREEZED: 'freezed',
+};
+
 module.exports = {
   ACCOUNT_TYPES,
   APPLICATION_TYPES,
@@ -51,4 +71,7 @@ module.exports = {
   GOV_ISSUE_ID_TYPES,
   TRANSACTION_TYPES,
   PAYMENT_METHODS,
+  TRANSACTION_STATUS,
+  STATUS,
+  LOCKER_STATUS,
 };

@@ -6,9 +6,9 @@ const accountController = require('../controllers/accounts.controller');
 const accountSerializer = require('../serializers/accounts.serializer');
 const transactionValidator = require('../validators/transactions.validator');
 const transactionController = require('../controllers/transactions.controller');
-const transactionSerializer = require('../serializers/policies.serializer');
+const transactionSerializer = require('../serializers/transactions.serializer');
 const commonHelper = require('../helpers/commonFunctions.helper');
-const constants = require('../constants/constants');
+const { ROLES } = require('../constants/constants');
 
 const router = express.Router();
 
@@ -17,7 +17,7 @@ const router = express.Router();
 router.post(
   '/',
   authMiddleware.checkAuthToken,
-  authMiddleware.authorizeRole(constants.ROLES['102']),
+  authMiddleware.authorizeRole(ROLES['102']),
   accountValidator.createSchema,
   accountController.create,
   accountSerializer.serialize,
@@ -45,7 +45,7 @@ router.get(
 router.patch(
   '/:id',
   authMiddleware.checkAuthToken,
-  authMiddleware.authorizeRole(constants.ROLES['102']),
+  authMiddleware.authorizeRole(ROLES['102']),
   commonValidator.idSchema,
   accountValidator.updateSchema,
   accountController.update,
@@ -56,10 +56,9 @@ router.patch(
 router.delete(
   '/:id',
   authMiddleware.checkAuthToken,
-  authMiddleware.authorizeRole(constants.ROLES['102']),
+  authMiddleware.authorizeRole(ROLES['102']),
   commonValidator.idSchema,
   accountController.remove,
-  accountSerializer.serialize,
   commonHelper.sendResponse
 );
 
@@ -67,17 +66,16 @@ router.delete(
 router.post(
   '/:accountId/transactions',
   authMiddleware.checkAuthToken,
-  authMiddleware.authorizeRole(constants.ROLES['103']),
-  accountValidator.idSchema,
-  transactionValidator.createSchema,
-  transactionController.create
+  authMiddleware.authorizeRole(ROLES['103']),
+  transactionValidator.createTransaction,
+  transactionController.create,
+  commonHelper.sendResponse
 );
 
 router.get(
   '/:accountId/transactions',
   authMiddleware.checkAuthToken,
-  authMiddleware.authorizeRole([constants.ROLES['102'], constants.ROLES['103']]),
-  accountValidator.idSchema,
+  authMiddleware.authorizeRole([ROLES['102'], ROLES['103']]),
   commonValidator.querySchema,
   transactionController.index,
   transactionSerializer.serialize,
@@ -87,8 +85,7 @@ router.get(
 router.get(
   '/:accountId/transactions/:transactionId',
   authMiddleware.checkAuthToken,
-  authMiddleware.authorizeRole([constants.ROLES['102'], constants.ROLES['103']]),
-  accountValidator.idSchema,
+  authMiddleware.authorizeRole([ROLES['102'], ROLES['103']]),
   transactionController.view,
   transactionSerializer.serialize,
   commonHelper.sendResponse

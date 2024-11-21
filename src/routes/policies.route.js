@@ -5,7 +5,7 @@ const policyValidator = require('../validators/policies.validator');
 const policyController = require('../controllers/policies.controller');
 const policySerializer = require('../serializers/policies.serializer');
 const commonHelper = require('../helpers/commonFunctions.helper');
-const constants = require('../constants/constants');
+const { ROLES } = require('../constants/constants');
 
 const router = express.Router();
 
@@ -13,7 +13,7 @@ const router = express.Router();
 router.post(
   '/',
   authMiddleware.checkAuthToken,
-  authMiddleware.authorizeRole(constants.ROLES['101']),
+  authMiddleware.authorizeRole(ROLES['101']),
   policyValidator.createSchema,
   policyController.create,
   policySerializer.serialize,
@@ -23,7 +23,7 @@ router.post(
 router.get(
   '/',
   authMiddleware.checkAuthToken,
-  authMiddleware.authorizeRole(constants.ROLES['101']),
+  authMiddleware.authorizeRole(ROLES['101']),
   commonValidator.querySchema,
   policyController.index,
   policySerializer.serialize,
@@ -33,7 +33,7 @@ router.get(
 router.get(
   '/:id',
   authMiddleware.checkAuthToken,
-  authMiddleware.authorizeRole(constants.ROLES['101']),
+  authMiddleware.authorizeRole(ROLES['101']),
   commonValidator.idSchema,
   policyController.view,
   policySerializer.serialize,
@@ -43,7 +43,7 @@ router.get(
 router.patch(
   '/:id',
   authMiddleware.checkAuthToken,
-  authMiddleware.authorizeRole(constants.ROLES['101']),
+  authMiddleware.authorizeRole(ROLES['101']),
   commonValidator.idSchema,
   policyValidator.updateSchema,
   policyController.update,
@@ -54,10 +54,9 @@ router.patch(
 router.delete(
   '/:id',
   authMiddleware.checkAuthToken,
-  authMiddleware.authorizeRole(constants.ROLES['101']),
+  authMiddleware.authorizeRole(ROLES['101']),
   commonValidator.idSchema,
   policyController.remove,
-  policySerializer.serialize,
   commonHelper.sendResponse
 );
 
