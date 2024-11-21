@@ -1,15 +1,14 @@
 const cron = require('node-cron');
 const { UserAccount, AccountPolicy, sequelize } = require('../models');
 const { Op } = require('sequelize');
-const constants = require('../constants/constants');
+const { ACCOUNT_TYPES } = require('../constants/constants');
 
-// Function to apply yearly interest
 async function applyYearlyInterest() {
   const transaction = await sequelize.transaction();
   try {
     const accounts = await UserAccount.findAll({
       where: {
-        type: [constants.ACCOUNT_TYPES.FIXED, constants.ACCOUNT_TYPES.RECURRING],
+        type: [ACCOUNT_TYPES.FIXED, ACCOUNT_TYPES.RECURRING],
         maturity_date: { [Op.gt]: new Date() },
         status: 'active',
       },
@@ -44,7 +43,6 @@ async function applyYearlyInterest() {
   }
 }
 
-// Function to inactivate accounts with zero balance for 10 days
 async function inactivateZeroBalanceAccounts() {
   try {
     const TEN_DAYS_AGO = new Date();
@@ -68,13 +66,16 @@ async function inactivateZeroBalanceAccounts() {
   }
 }
 
-// Schedule both tasks
-cron.schedule('0 0 1 1 *', async () => {
-  console.log('Running yearly interest scheduler...');
-  await applyYearlyInterest();
-});
+function startCronJobs() {
+  cron.schedule('0 0 1 1 *', async () => {
+    console.log('Running yearly interest scheduler...');
+    await applyYearlyInterest();
+  });
 
-cron.schedule('0 0 * * *', async () => {
-  console.log('Running zero-balance account inactivity scheduler...');
-  await inactivateZeroBalanceAccounts();
-});
+  cron.schedule('0 0 * * *', async () => {
+    console.log('Running zero-balance account inactivity scheduler...');
+    await inactivateZeroBalanceAccounts();
+  });
+}
+
+module.exports = startCronJobs;

@@ -24,22 +24,4 @@ async function updateSchema(req, res, next) {
   validateHelper.validateRequest(req, res, next, schema, 'body');
 }
 
-async function idSchema(req, res, next) {
-  const schema = Joi.object({
-    accountId: Joi.string()
-      .guid({
-        version: ['uuidv4'],
-      })
-      .required(),
-
-    transactionId: Joi.string()
-      .guid({
-        version: ['uuidv4'],
-      })
-      .optional(),
-  });
-
-  validateHelper.validateRequest(req, res, next, schema, 'body');
-}
-
-module.exports = { createSchema, updateSchema, idSchema };
+module.exports = { createSchema, updateSchema };
