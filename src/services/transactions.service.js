@@ -1,21 +1,26 @@
-const { User, Transaction, Account, Branch, sequelize } = require('../models');
+const { User, Transaction, UserAccount, Branch, sequelize } = require('../models');
 const commonHelper = require('../helpers/commonFunctions.helper');
 const notificationHelper = require('../helpers/notifications.helper');
-const constants = require('../constants/constants');
+const {
+  ACCOUNT_TYPES,
+  STATUS,
+  ROLES,
+  TRANSACTION_STATUS,
+  TRANSACTION_TYPES,
+} = require('../constants/constants');
 
 // This function processes account transactions including withdrawal, deposit, and
 // transfer by validating account status, balance, and transaction details, ensuring data consistency via transactions.
-async function create(params, payload, user) {
+async function create(accountId, payload, user) {
   const transaction = await sequelize.transaction();
   let debitTransaction, creditTransaction;
 
   try {
     const { type, amount, fee, paymentMethod, accountNo } = payload;
-    const { accountId } = params;
     const customerId = user.id;
 
     const customer = await User.findByPk(customerId);
-    const account = await Account.findByPk(accountId);
+    const account = await UserAccount.findByPk(accountId);
 
     if (!account) return commonHelper.customError('Account not found', 404);
 
@@ -23,8 +28,7 @@ async function create(params, payload, user) {
     const parsedFee = parseFloat(fee || 0);
 
     if (
-      (account.type === constants.ACCOUNT_TYPES.FIXED ||
-        account.type === constants.ACCOUNT_TYPES.RECURRING) &&
+      (account.type === ACCOUNT_TYPES.FIXED || account.type === ACCOUNT_TYPES.RECURRING) &&
       account.maturity_date
     ) {
       const maturityDate = new Date(account.maturity_date);
@@ -37,8 +41,8 @@ async function create(params, payload, user) {
       }
     }
 
-    if (type === constants.TRANSACTION_TYPES.WITHDRAWAL) {
-      if (account.status === 'inactive') {
+    if (type === TRANSACTION_TYPES.WITHDRAWAL) {
+      if (account.status === STATUS.INACTIVE) {
         return commonHelper.customError('Account inactive, cannot proceed with transaction', 400);
       }
 
@@ -60,26 +64,26 @@ async function create(params, payload, user) {
           fee: parsedFee,
           balance_before: balanceBefore,
           balance_after: balanceAfter,
-          status: 'completed',
+          status: TRANSACTION_STATUS.COMPLETED,
         },
         { transaction }
       );
 
-      await notificationHelper.transactionNotification(
+      await transaction.commit();
+      notificationHelper.transactionNotification(
         customer.email,
         type,
         parsedAmount,
         balanceBefore,
         balanceAfter
       );
-      await transaction.commit();
 
       return { message: 'Withdrawal successful' };
-    } else if (type === constants.TRANSACTION_TYPES.DEPOSIT) {
+    } else if (type === TRANSACTION_TYPES.DEPOSIT) {
       const balanceBefore = parseFloat(account.balance);
       const balanceAfter = parseFloat((balanceBefore + parsedAmount).toFixed(2));
 
-      await account.update({ balance: balanceAfter, status: 'active' }, { transaction });
+      await account.update({ balance: balanceAfter, status: STATUS.ACTIVE }, { transaction });
 
       creditTransaction = await Transaction.create(
         {
@@ -90,28 +94,32 @@ async function create(params, payload, user) {
           fee: 0,
           balance_before: balanceBefore,
           balance_after: balanceAfter,
-          status: 'completed',
+          status: TRANSACTION_STATUS.COMPLETED,
         },
         { transaction }
       );
 
-      await notificationHelper.transactionNotification(
+      await transaction.commit();
+      notificationHelper.transactionNotification(
         customer.email,
         type,
         parsedAmount,
         balanceBefore,
         balanceAfter
       );
-      await transaction.commit();
 
       return { message: 'Deposit successful' };
     }
 
-    if (account.status === 'inactive') {
+    if (account.status === STATUS.INACTIVE) {
       return commonHelper.customError('Account inactive, cannot proceed with transaction', 400);
     }
 
-    const toAccount = await Account.findOne({ where: { number: accountNo } });
+    if (!accountNo) return commonHelper.customError('Please write destination account no.', 400);
+    if (accountNo === account.number)
+      return commonHelper.customError('Source account and destination account cannot be same', 409);
+
+    const toAccount = await UserAccount.findOne({ where: { number: accountNo } });
     if (!toAccount) return commonHelper.customError('Destination account not found', 400);
 
     const toAccountCustomer = await User.findByPk(toAccount.user_id);
@@ -126,19 +134,19 @@ async function create(params, payload, user) {
     const toBalanceAfter = parseFloat((toBalanceBefore + parsedAmount).toFixed(2));
 
     await account.update({ balance: balanceAfter }, { transaction });
-    await toAccount.update({ balance: toBalanceAfter, status: 'active' }, { transaction });
+    await toAccount.update({ balance: toBalanceAfter, status: STATUS.ACTIVE }, { transaction });
 
     debitTransaction = await Transaction.create(
       {
         account_id: account.id,
         account_no: accountNo,
-        type: 'transfer',
+        type,
         payment_method: paymentMethod,
         amount: parsedAmount,
         fee: parsedFee,
         balance_before: balanceBefore,
         balance_after: balanceAfter,
-        status: 'completed',
+        status: TRANSACTION_STATUS.COMPLETED,
       },
       { transaction }
     );
@@ -147,44 +155,44 @@ async function create(params, payload, user) {
       {
         account_id: toAccount.id,
         account_no: account.number,
-        type: 'transfer',
+        type,
         payment_method: paymentMethod,
         amount: parsedAmount,
         fee: 0,
         balance_before: toBalanceBefore,
         balance_after: toBalanceAfter,
-        status: 'completed',
+        status: TRANSACTION_STATUS.COMPLETED,
       },
       { transaction }
     );
 
-    await notificationHelper.transactionNotification(
+    await transaction.commit();
+    notificationHelper.transactionNotification(
       customer.email,
       type,
       parsedAmount,
       balanceBefore,
       balanceAfter
     );
-    await notificationHelper.transactionNotification(
+    notificationHelper.transactionNotification(
       toAccountCustomer.email,
       type,
       parsedAmount,
       toBalanceBefore,
       toBalanceAfter
     );
-    await transaction.commit();
 
     return { message: 'Transfer successful' };
   } catch (error) {
     await transaction.rollback();
 
     if (debitTransaction) {
-      await debitTransaction.update({ status: 'failed' }).catch(() => {
+      await debitTransaction.update({ status: TRANSACTION_STATUS.FAILED }).catch(() => {
         console.error('Failed to update debit transaction status to failed');
       });
     }
     if (creditTransaction) {
-      await creditTransaction.update({ status: 'failed' }).catch(() => {
+      await creditTransaction.update({ status: TRANSACTION_STATUS.FAILED }).catch(() => {
         console.error('Failed to update credit transaction status to failed');
       });
     }
@@ -198,16 +206,12 @@ async function index(accountId, query, user) {
   const { page, limit } = query;
   const { id, role } = user;
 
-  const account = await Account.findByPk(accountId);
-
-  if (!account) {
-    return commonHelper.customError('Account not found', 404);
-  }
-
   const offset = (page - 1) * limit;
 
   let transactions;
-  if (role === constants.ROLES['102']) {
+  if (role === ROLES['102']) {
+    const account = UserAccount.findByPk(accountId);
+
     const branch = await Branch.findOne({
       where: { user_id: id },
     });
@@ -220,12 +224,28 @@ async function index(accountId, query, user) {
       where: { account_id: accountId },
       offset: offset,
       limit: limit,
+      order: [['created_at', 'DESC']],
     });
-  } else if (role === constants.ROLES['103'] && account.user_id === id) {
+  } else if (role === ROLES['103']) {
+    const account = await UserAccount.findOne({
+      where: {
+        id: accountId,
+      },
+      include: {
+        model: User,
+        where: { id },
+      },
+    });
+
+    if (!account) {
+      return commonHelper.customError('Account not found', 404);
+    }
+
     transactions = await Transaction.findAndCountAll({
       where: { account_id: accountId },
       offset: offset,
       limit: limit,
+      order: [['created_at', 'DESC']],
     });
   }
 
@@ -237,7 +257,7 @@ async function index(accountId, query, user) {
     totalItems: transactions.count,
     totalPages: Math.ceil(transactions.count / limit),
     currentPage: page,
-    rows: transactions.rows,
+    transactions: transactions.rows,
   };
 }
 
@@ -245,14 +265,14 @@ async function index(accountId, query, user) {
 async function view(accountId, transactionId, user) {
   const { id, role } = user;
 
-  const account = await Account.findByPk(accountId);
+  const account = await UserAccount.findByPk(accountId);
 
   if (!account) {
     return commonHelper.customError('Account not found', 404);
   }
 
   let transaction;
-  if (role === constants.ROLES['102']) {
+  if (role === ROLES['102']) {
     const branch = await Branch.findOne({
       where: { user_id: id },
     });
@@ -267,7 +287,7 @@ async function view(accountId, transactionId, user) {
         account_id: accountId,
       },
     });
-  } else if (role === constants.ROLES['103'] && account.user_id === id) {
+  } else if (role === ROLES['103'] && account.user_id === id) {
     transaction = await Transaction.findOne({
       where: {
         id: transactionId,

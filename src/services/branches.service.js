@@ -1,6 +1,7 @@
 const { User, Role, Branch, Bank, sequelize } = require('../models');
 const { Op } = require('sequelize');
 const commonHelper = require('../helpers/commonFunctions.helper');
+const { ROLES } = require('../constants/constants');
 
 // create new branch and assign a branch manager to it
 async function create(payload) {
@@ -13,7 +14,7 @@ async function create(payload) {
       where: { id: userId },
       include: {
         model: Role,
-        where: { name: 'Branch Manager' },
+        where: { code: ROLES['102'] },
         through: { attributes: [] },
       },
     });
@@ -77,7 +78,7 @@ async function index(query) {
   }
 
   return {
-    rows: branches.rows,
+    branches: branches.rows,
     totalBranches: branches.count,
     currentPage: page,
     totalPages: Math.ceil(branches.count / limit),
@@ -86,7 +87,11 @@ async function index(query) {
 
 // get a branch by id
 async function view(id) {
-  return Branch.findByPk(id);
+  const branch = await Branch.findByPk(id);
+  if (!branch) {
+    return commonHelper.customError('Branch not found', 404);
+  }
+  return branch;
 }
 
 // update a branch by id
@@ -99,13 +104,20 @@ async function update(id, payload) {
       return commonHelper.customError('Branch not found', 404);
     }
 
+    if (branch.user_id === userId || branch.ifsc_code === ifscCode || branch.contact === contact) {
+      return commonHelper.customError(
+        'Cannot use same data for user id or ifsc code or contact for updation',
+        409
+      );
+    }
+
     const updatedBranch = await branch.update(
       {
         bank_id: branch.bank_id,
-        user_id: userId,
+        user_id: userId ? userId : branch.user_id,
         address,
-        ifsc_code: ifscCode,
-        contact,
+        ifsc_code: ifscCode ? ifscCode : branch.ifsc_code,
+        contact: contact ? contact : branch.contact,
         total_lockers: totalLockers,
       },
       { transaction }

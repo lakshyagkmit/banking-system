@@ -2,7 +2,7 @@ const { User, UserAccount, Branch, UserApplication, UserLocker, sequelize } = re
 const { Op } = require('sequelize');
 const commonHelper = require('../helpers/commonFunctions.helper');
 const notificationHelper = require('../helpers/notifications.helper');
-const constants = require('../constants/constants');
+const { STATUS, APPLICATION_TYPES } = require('../constants/constants');
 
 // request for creation of new account in the bank
 async function requestAccount(payload, user) {
@@ -48,9 +48,9 @@ async function requestAccount(payload, user) {
       { transaction }
     );
 
-    await notificationHelper.applicationRequestNotification(branchManager.email, customer.name, 'account');
-    await notificationHelper.applicationSuccessNotification(customer.email, 'account');
     await transaction.commit();
+    notificationHelper.applicationRequestNotification(branchManager.email, customer.name, 'account');
+    notificationHelper.applicationSuccessNotification(customer.email, 'account');
 
     return newRequest;
   } catch (error) {
@@ -85,7 +85,7 @@ async function requestLocker(payload, user) {
     const locker = await UserLocker.findOne({
       where: {
         user_id: id,
-        status: 'active',
+        status: STATUS.ACTIVE,
       },
     });
 
@@ -110,9 +110,9 @@ async function requestLocker(payload, user) {
       { transaction }
     );
 
-    await notificationHelper.applicationRequestNotification(branchManager.email, customer.name, 'locker');
-    await notificationHelper.applicationSuccessNotification(customer.email, 'locker');
     await transaction.commit();
+    notificationHelper.applicationRequestNotification(branchManager.email, customer.name, 'locker');
+    notificationHelper.applicationSuccessNotification(customer.email, 'locker');
 
     return newRequest;
   } catch (error) {
@@ -137,9 +137,9 @@ async function index(query, user) {
   };
 
   if (requestType === 'accounts') {
-    whereCondition.type = { [Op.ne]: constants.APPLICATION_TYPES.LOCKER };
+    whereCondition.type = { [Op.ne]: APPLICATION_TYPES.LOCKER };
   } else if (requestType === 'lockers') {
-    whereCondition.type = constants.APPLICATION_TYPES.LOCKER;
+    whereCondition.type = APPLICATION_TYPES.LOCKER;
   }
 
   const applications = await UserApplication.findAndCountAll({
@@ -159,7 +159,7 @@ async function index(query, user) {
     totalItems: applications.count,
     totalPages: Math.ceil(applications.count / limit),
     currentPage: page,
-    rows: applications.rows,
+    applications: applications.rows,
   };
 }
 

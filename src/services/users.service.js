@@ -3,7 +3,7 @@ const { Op } = require('sequelize');
 const bcrypt = require('bcryptjs');
 const commonHelper = require('../helpers/commonFunctions.helper');
 const awsHelper = require('../helpers/aws.helper');
-const constants = require('../constants/constants');
+const { ROLES } = require('../constants/constants');
 
 // This function creates a new user with either a "Branch Manager" or
 //"Customer" role, depending on the creator's role (Admin or not).
@@ -49,7 +49,7 @@ async function create(payload, file, user) {
     );
 
     const usersRole = await Role.findOne({
-      where: { code: role === constants.ROLES['101'] ? constants.ROLES['102'] : constants.ROLES['103'] },
+      where: { code: role === ROLES['101'] ? ROLES['102'] : ROLES['103'] },
     });
 
     await UserRole.create(
@@ -74,15 +74,15 @@ async function index(query, user) {
   const { role } = user;
 
   let roles;
-  if (role === constants.ROLES['101'] && userRole === constants.ROLES['103']) {
-    roles = [constants.ROLES['103']];
-  } else if (role === constants.ROLES['101'] && userRole === constants.ROLES['102']) {
-    roles = [constants.ROLES['102']];
+  if (role === ROLES['101'] && userRole === ROLES['103']) {
+    roles = [ROLES['103']];
+  } else if (role === ROLES['101'] && userRole === ROLES['102']) {
+    roles = [ROLES['102']];
   } else {
-    if (role === constants.ROLES['101']) {
-      roles = [constants.ROLES['102'], constants.ROLES['103']];
+    if (role === ROLES['101']) {
+      roles = [ROLES['102'], ROLES['103']];
     } else {
-      roles = [constants.ROLES['103']];
+      roles = [ROLES['103']];
     }
   }
 
@@ -106,7 +106,7 @@ async function index(query, user) {
     totalItems: users.count,
     totalPages: Math.ceil(users.count / limit),
     currentPage: page,
-    rows: users.rows,
+    users: users.rows,
   };
 }
 
@@ -117,10 +117,10 @@ async function view(id, user) {
   let roles;
   if (user.id === id) {
     roles = [role];
-  } else if (role === constants.ROLES['101']) {
-    roles = [constants.ROLES['102'], constants.ROLES['103']];
+  } else if (role === ROLES['101']) {
+    roles = [ROLES['102'], ROLES['103']];
   } else {
-    roles = constants.ROLES['103'];
+    roles = ROLES['103'];
   }
 
   const users = await User.findOne({
@@ -131,6 +131,10 @@ async function view(id, user) {
       through: { attributes: [] },
     },
   });
+
+  if (!users) {
+    return commonHelper.customError('User not found', 404);
+  }
 
   return users;
 }
@@ -143,7 +147,18 @@ async function update(id, payload, user) {
     const { name, email, contact, fatherName, motherName, address } = payload;
     const { role } = user;
 
-    const userToUpdate = await User.findOne({
+    const existingUser = await User.findOne({
+      where: {
+        [Op.or]: [{ email }, { contact }],
+      },
+    });
+
+    if (existingUser) {
+      const field = existingUser.email === email ? 'email' : 'contact';
+      return commonHelper.customError(`This ${field} already occupied, please use another ${field}`, 409);
+    }
+
+    const updateUser = await User.findOne({
       where: { id },
       include: {
         model: Role,
@@ -152,35 +167,32 @@ async function update(id, payload, user) {
       },
     });
 
-    if (!userToUpdate) {
+    if (!updateUser) {
       return commonHelper.customError('User not found', 404);
     }
 
-    const userRole = userToUpdate.Roles[0].code;
+    const userRole = updateUser.Roles[0].code;
 
-    if (
-      role === constants.ROLES['101'] ||
-      (role === constants.ROLES['102'] && userRole === constants.ROLES['103'])
-    ) {
-      const updatedUser = await userToUpdate.update(
-        {
-          name,
-          email,
-          password: userToUpdate.password,
-          contact,
-          gov_issue_id_type: userToUpdate.gov_issue_id_type,
-          gov_issue_id_image: userToUpdate.gov_issue_id_image,
-          father_name: fatherName,
-          mother_name: motherName,
-          address,
-          is_verified: userToUpdate.is_verified,
-        },
-        { transaction }
-      );
-      await transaction.commit();
-
-      return updatedUser;
+    if (role === ROLES['102'] && userRole === ROLES['102']) {
+      return commonHelper.customError('Branch manager cannot delete a branch manager', 403);
     }
+
+    const { email: userEmail, contact: userContact } = updateUser;
+
+    const updatedUser = await updateUser.update(
+      {
+        name,
+        email: email ? email : userEmail,
+        contact: contact ? contact : userContact,
+        father_name: fatherName,
+        mother_name: motherName,
+        address,
+      },
+      { transaction }
+    );
+    await transaction.commit();
+
+    return updatedUser;
   } catch (error) {
     await transaction.rollback();
     throw error;
@@ -193,20 +205,24 @@ async function remove(id, user) {
   try {
     const { role } = user;
 
-    const userToDelete = await User.findByPk(id, {
+    const updateUser = await User.findByPk(id, {
       include: {
         model: Role,
         attributes: ['code'],
       },
     });
 
-    if (!userToDelete) {
+    if (!updateUser) {
       return commonHelper.customError('User not found', 404);
     }
 
-    const userRole = userToDelete.Roles[0].code;
+    const userRole = updateUser.Roles[0].code;
 
-    if (userRole === constants.ROLES['102']) {
+    if (role === ROLES['102'] && userRole === ROLES['102']) {
+      return commonHelper.customError('Branch manager cannot delete a branch manager', 403);
+    }
+
+    if (userRole === ROLES['102']) {
       const isManagingBranch = await Branch.findOne({
         where: { user_id: id },
       });
@@ -216,7 +232,7 @@ async function remove(id, user) {
       }
     }
 
-    if (userRole === constants.ROLES['103']) {
+    if (userRole === ROLES['103']) {
       const hasActiveAccounts = await UserAccount.findOne({
         where: { user_id: id },
       });
@@ -226,18 +242,13 @@ async function remove(id, user) {
       }
     }
 
-    if (
-      role === constants.ROLES['101'] ||
-      (role === constants.ROLES['102'] && userRole === constants.ROLES['103'])
-    ) {
-      await userToDelete.destroy({ transaction });
-      await UserRole.destroy(
-        {
-          where: { user_id: id },
-        },
-        { transaction }
-      );
-    }
+    await updateUser.destroy({ transaction });
+    await UserRole.destroy(
+      {
+        where: { user_id: id },
+      },
+      { transaction }
+    );
 
     await transaction.commit();
 

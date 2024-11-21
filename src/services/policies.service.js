@@ -11,15 +11,12 @@ async function create(payload) {
     const existingPolicy = await AccountPolicy.findOne({
       where: {
         account_type: accountType,
+        interest_rate: interestRate,
+        initial_amount: initialAmount,
       },
     });
 
-    if (existingPolicy) {
-      return commonHelper.customError(
-        'Policy with same account type and subtype exists, please use another type or subtype',
-        409
-      );
-    }
+    if (existingPolicy) return commonHelper.customError('Policy already exists', 409);
 
     const bank = await Bank.findOne();
 
@@ -59,7 +56,7 @@ async function index(query) {
   }
 
   return {
-    rows: policies.rows,
+    policies: policies.rows,
     totalPolicies: policies.count,
     currentPage: page,
     totalPages: Math.ceil(policies.count / limit),
@@ -68,7 +65,11 @@ async function index(query) {
 
 // get a policy by id
 async function view(id) {
-  return AccountPolicy.findByPk(id);
+  const policy = await AccountPolicy.findByPk(id);
+  if (!policy) {
+    return commonHelper.customError('Policy not found', 404);
+  }
+  return policy;
 }
 
 // update a policy by id
@@ -106,7 +107,7 @@ async function remove(id) {
       return commonHelper.customError('Policy not found', 404);
     }
 
-    const account = UserAccount.findOne({
+    const account = await UserAccount.findOne({
       where: { policy_id: policy.id },
     });
 
@@ -116,6 +117,8 @@ async function remove(id) {
 
     await policy.destroy({ transaction });
     await transaction.commit();
+
+    return { message: 'Policy deleted successfully' };
   } catch (error) {
     await transaction.rollback();
     throw error;

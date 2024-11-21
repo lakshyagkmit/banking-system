@@ -1,7 +1,7 @@
 const { UserApplication, Branch, Locker, User, Role, UserLocker, sequelize } = require('../models');
 const commonHelper = require('../helpers/commonFunctions.helper');
 const notificationHelper = require('../helpers/notifications.helper');
-const constants = require('../constants/constants');
+const { ROLES, APPLICATION_TYPES, LOCKER_STATUS, STATUS } = require('../constants/constants');
 
 // assign a locker to customer based on availability
 async function assign(payload, user) {
@@ -19,7 +19,7 @@ async function assign(payload, user) {
       },
     });
 
-    if (!customer || customer.Roles[0].code !== constants.ROLES['103']) {
+    if (!customer || customer.Roles[0].code !== ROLES['103']) {
       return commonHelper.customError('No user found', 404);
     }
 
@@ -29,7 +29,7 @@ async function assign(payload, user) {
       },
     });
 
-    if (!branch.available_lockers) {
+    if (!branch.total_lockers) {
       return commonHelper.customError('Locker not available', 400);
     }
 
@@ -37,7 +37,7 @@ async function assign(payload, user) {
       where: {
         user_id: customer.id,
         branch_ifsc_code: branch.ifsc_code,
-        type: constants.APPLICATION_TYPES.LOCKER,
+        type: APPLICATION_TYPES.LOCKER,
       },
     });
 
@@ -48,6 +48,7 @@ async function assign(payload, user) {
     const locker = await Locker.findOne({
       where: {
         serial_no: lockerSerialNo,
+        branch_id: branch.id,
       },
     });
 
@@ -58,7 +59,7 @@ async function assign(payload, user) {
     const userLocker = await UserLocker.findOne({
       where: {
         user_id: customer.id,
-        status: 'active',
+        status: STATUS.ACTIVE,
       },
     });
 
@@ -70,15 +71,15 @@ async function assign(payload, user) {
       {
         locker_id: locker.id,
         user_id: customer.id,
-        status: 'active',
+        status: STATUS.ACTIVE,
       },
       { transaction }
     );
 
-    await locker.update({ status: 'freezed' }, { transaction });
+    await locker.update({ status: LOCKER_STATUS.FREEZED }, { transaction });
     await application.destroy({ transaction });
-    await notificationHelper.lockerAssignedNotification(email, lockerSerialNo);
     await transaction.commit();
+    notificationHelper.lockerAssignedNotification(email, lockerSerialNo);
 
     return { message: 'Locker assigned successfully' };
   } catch (error) {
@@ -100,6 +101,8 @@ async function create(payload, user) {
     where: { branch_id: branch.id },
   });
 
+  console.log(lockerCount);
+
   if (lockerCount + numberOfLockers > branch.total_lockers) {
     return commonHelper.customError(
       'Cannot create lockers more than assigned total lockers in the branch',
@@ -113,7 +116,7 @@ async function create(payload, user) {
       branch_id: branch.id,
       serial_no: i + 1,
       monthly_charge: monthlyCharge,
-      status: 'available',
+      status: LOCKER_STATUS.AVAILABLE,
     });
   }
 
@@ -129,9 +132,9 @@ async function index(query, user) {
   const offset = (page - 1) * limit;
 
   let lockers;
-  if (role === constants.ROLES['103']) {
+  if (role === ROLES['103']) {
     lockers = await Locker.findAndCountAll({
-      where: { status: 'freezed' },
+      where: { status: LOCKER_STATUS.FREEZED },
       include: {
         model: User,
         where: { id },
@@ -159,16 +162,16 @@ async function index(query, user) {
     totalItems: lockers.count,
     totalPages: Math.ceil(lockers.count / limit),
     currentPage: page,
-    rows: lockers.rows,
+    lockers: lockers.rows,
   };
 }
 
 // list a locker by id
 async function view(id, user) {
   let locker;
-  if (user.role === constants.ROLES['103']) {
+  if (user.role === ROLES['103']) {
     locker = await Locker.findAndCountAll({
-      where: { id, status: 'freezed' },
+      where: { id, status: LOCKER_STATUS.FREEZED },
       include: {
         model: User,
         where: { id: user.id },
@@ -183,6 +186,9 @@ async function view(id, user) {
       where: {
         id,
         branch_id: branch.id,
+      },
+      include: {
+        model: User,
       },
     });
   }
@@ -265,17 +271,17 @@ async function deallocate(id, user) {
     const userLocker = await UserLocker.findOne({
       where: {
         locker_id: locker.id,
-        status: 'active',
+        status: STATUS.ACTIVE,
       },
       transaction,
     });
 
-    if (!userLocker || locker.status === 'available') {
+    if (!userLocker || locker.status === LOCKER_STATUS.AVAILABLE) {
       return commonHelper.customError('Locker is not currently assigned', 400);
     }
 
-    await locker.update({ status: 'available' }, { transaction });
-    await userLocker.update({ status: 'inactive' }, { transaction });
+    await locker.update({ status: LOCKER_STATUS.AVAILABLE }, { transaction });
+    await userLocker.update({ status: STATUS.INACTIVE }, { transaction });
     await transaction.commit();
 
     return { message: 'Locker deallocated successfully' };
