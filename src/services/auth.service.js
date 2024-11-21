@@ -6,6 +6,7 @@ const commonHelper = require('../helpers/commonFunctions.helper');
 const otpHelper = require('../helpers/otps.helper');
 const jwtHelper = require('../helpers/jwt.helper');
 const awsHelper = require('../helpers/aws.helper');
+const { ROLES } = require('../constants/constants');
 
 /**
  * Registers a new user, assigns the 'Customer' role, uploads the govIssueId image,
@@ -27,7 +28,7 @@ async function register(payload, file) {
     }
 
     if (!file) {
-      return commonHelper.customError(`Please add gov_issue_id_image`, 409);
+      return commonHelper.customError(`Please add gov_issue_id_image`, 400);
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -49,7 +50,7 @@ async function register(payload, file) {
     );
 
     const usersRole = await Role.findOne({
-      where: { name: 'Customer' },
+      where: { code: ROLES['103'] },
     });
 
     await UserRole.create(
@@ -60,8 +61,8 @@ async function register(payload, file) {
       { transaction }
     );
 
-    await notificationHelper.sendOtp(email);
     await transaction.commit();
+    notificationHelper.sendOtp(email);
 
     return newUser;
   } catch (error) {
@@ -101,7 +102,7 @@ async function login(email) {
     commonHelper.customError(`User with email ${email} does not exist`, 404);
   }
 
-  await notificationHelper.sendOtp(email);
+  notificationHelper.sendOtp(email);
 
   return user;
 }
@@ -133,7 +134,7 @@ async function verifyOtp(email, otp) {
 
 //Resends the OTP to the user's email for verification.
 async function resendOtp(email) {
-  await notificationHelper.sendOtp(email);
+  notificationHelper.sendOtp(email);
   return;
 }
 

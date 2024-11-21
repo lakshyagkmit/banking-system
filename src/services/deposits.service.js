@@ -2,7 +2,7 @@ const { User, UserAccount, Branch, AccountPolicy, sequelize } = require('../mode
 const commonHelper = require('../helpers/commonFunctions.helper');
 const accountHelper = require('../helpers/accounts.helper');
 const notificationHelper = require('../helpers/notifications.helper');
-const constants = require('../constants/constants');
+const { ACCOUNT_TYPES } = require('../constants/constants');
 
 // Create a  new deposit account
 async function create(payload, user) {
@@ -12,11 +12,11 @@ async function create(payload, user) {
     const { type, nominee, installmentAmount, principleAmount } = payload;
     const { id } = user;
 
-    if (type === constants.ACCOUNT_TYPES.FIXED && !principleAmount) {
+    if (type === ACCOUNT_TYPES.FIXED && !principleAmount) {
       return commonHelper.customError('Please add principle amount to proceed further', 400);
     }
 
-    if (type === constants.ACCOUNT_TYPES.RECURRING && !installmentAmount) {
+    if (type === ACCOUNT_TYPES.RECURRING && !installmentAmount) {
       return commonHelper.customError('Please add installment amount to proceed further', 400);
     }
 
@@ -78,16 +78,15 @@ async function create(payload, user) {
         interest_rate: policy.interest_rate,
         nominee,
         installment_amount:
-          type === constants.ACCOUNT_TYPES.RECURRING ? parseFloat(installmentAmount).toFixed(2) : null,
-        principle_amount:
-          type === constants.ACCOUNT_TYPES.FIXED ? parseFloat(principleAmount).toFixed(2) : null,
+          type === ACCOUNT_TYPES.RECURRING ? parseFloat(installmentAmount).toFixed(2) : null,
+        principle_amount: type === ACCOUNT_TYPES.FIXED ? parseFloat(principleAmount).toFixed(2) : null,
         maturity_date: maturityDate,
       },
       { transaction }
     );
 
-    await notificationHelper.accountCreationNotification(customer.email, type, accountNumber);
     await transaction.commit();
+    notificationHelper.accountCreationNotification(customer.email, type, accountNumber);
 
     return deposit;
   } catch (error) {

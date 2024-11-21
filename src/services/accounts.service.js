@@ -2,7 +2,7 @@ const { User, Role, UserAccount, Branch, AccountPolicy, UserApplication, sequeli
 const commonHelper = require('../helpers/commonFunctions.helper');
 const accountHelper = require('../helpers/accounts.helper');
 const notificationHelper = require('../helpers/notifications.helper');
-const constants = require('../constants/constants');
+const { ROLES, ACCOUNT_TYPES } = require('../constants/constants');
 
 // Create a  new account for customer based on his application
 async function create(payload, user) {
@@ -19,7 +19,12 @@ async function create(payload, user) {
       },
     });
 
-    if (!customer || customer.Roles[0].code !== constants.ROLES['103']) {
+    if (
+      !customer ||
+      !customer.Roles ||
+      customer.Roles.length === 0 ||
+      customer.Roles[0].code !== ROLES['103']
+    ) {
       return commonHelper.customError('No user Found', 404);
     }
 
@@ -35,7 +40,7 @@ async function create(payload, user) {
       where: {
         user_id: customer.id,
         branch_ifsc_code: branch.ifsc_code,
-        type: constants.ACCOUNT_TYPES.SAVINGS || constants.ACCOUNT_TYPES.CURRENT,
+        type: ACCOUNT_TYPES.SAVINGS || ACCOUNT_TYPES.CURRENT,
       },
     });
 
@@ -45,7 +50,7 @@ async function create(payload, user) {
 
     const branchId = branch.id;
 
-    if (role === constants.ROLES['102']) {
+    if (role === ROLES['102']) {
       const branch = await Branch.findOne({
         where: { user_id: user.id },
       });
@@ -76,7 +81,7 @@ async function create(payload, user) {
     });
 
     if (!policy) {
-      return commonHelper.customError('Invalid type and subtype combination.', 409);
+      return commonHelper.customError('Invalid type', 409);
     }
 
     const accountNumber = accountHelper.generateAccountNumber();
@@ -96,8 +101,8 @@ async function create(payload, user) {
 
     await application.destroy({ transaction });
 
-    await notificationHelper.accountCreationNotification(customer.email, type, accountNumber);
     await transaction.commit();
+    notificationHelper.accountCreationNotification(customer.email, type, accountNumber);
 
     return newAccount;
   } catch (error) {
@@ -114,12 +119,12 @@ async function index(query, user) {
   const offset = (page - 1) * limit;
 
   let accounts;
-  if (role === constants.ROLES['101']) {
+  if (role === ROLES['101']) {
     accounts = await UserAccount.findAndCountAll({
       offset: offset,
       limit: limit,
     });
-  } else if (role === constants.ROLES['102']) {
+  } else if (role === ROLES['102']) {
     const branch = await Branch.findOne({
       where: { user_id: user.id },
     });
@@ -128,7 +133,7 @@ async function index(query, user) {
       offset: offset,
       limit: limit,
     });
-  } else if (user.role === constants.ROLES['103']) {
+  } else if (user.role === ROLES['103']) {
     accounts = await UserAccount.findAndCountAll({
       where: { user_id: user.id },
       offset: offset,
@@ -144,7 +149,7 @@ async function index(query, user) {
     totalItems: accounts.count,
     totalPages: Math.ceil(accounts.count / limit),
     currentPage: page,
-    rows: accounts.rows,
+    accounts: accounts.rows,
   };
 }
 
@@ -154,7 +159,7 @@ async function view(id, user) {
   const role = user.role;
 
   let account;
-  if (role === constants.ROLES['103']) {
+  if (role === ROLES['103']) {
     account = await UserAccount.findOne({
       where: { id: accountId, user_id: user.id },
       include: {
@@ -163,7 +168,7 @@ async function view(id, user) {
     });
   }
 
-  if (role === constants.ROLES['101']) {
+  if (role === ROLES['101']) {
     account = UserAccount.findOne({
       where: { id: accountId },
       include: [
@@ -177,7 +182,7 @@ async function view(id, user) {
     });
   }
 
-  if (role === constants.ROLES['102']) {
+  if (role === ROLES['102']) {
     const branch = await Branch.findOne({
       where: { user_id: user.id },
     });
@@ -196,6 +201,10 @@ async function view(id, user) {
         },
       ],
     });
+  }
+
+  if (!account) {
+    return commonHelper.customError('Account not found', 404);
   }
 
   return account;
@@ -258,7 +267,7 @@ async function remove(id, user) {
     await account.destroy({ transaction });
     await transaction.commit();
 
-    return;
+    return { message: 'Account Deleted Successfully' };
   } catch (error) {
     await transaction.rollback();
     throw error;
