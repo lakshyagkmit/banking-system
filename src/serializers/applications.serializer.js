@@ -1,40 +1,44 @@
 const serialize = (req, res, next) => {
-  let { rows } = res.data || {};
+  let { applications } = res.data || {};
   let response = [];
 
-  if (!rows) {
-    rows = [res.data];
+  if (!applications) {
+    applications = [res.data];
   }
 
-  for (const account of rows) {
+  for (const application of applications) {
     const data = {};
-    data.id = account.id;
-    data.userId = account.user_id;
-    data.branchIfscCode = account.branch_ifsc_code;
-    data.type = account.type;
-    data.nomineeName = account.nominee_name;
+    data.id = application.id;
+    data.userId = application.user_id;
+    data.branchIfscCode = application.branch_ifsc_code;
+    data.type = application.type;
+    data.nomineeName = application.nominee_name;
+    data.createdAt = application.created_at;
+    data.updatedAt = application.updated_at;
 
-    if (account.User) {
+    if (application.User) {
       data.user = {
-        id: account.User.id,
-        name: account.User.name,
-        email: account.User.email,
-        contact: account.User.contact,
-        govIssueIdType: account.User.gov_issue_id_type,
-        govIssueIdImage: account.User.gov_issue_id_image,
-        fatherName: account.User.father_name,
-        motherName: account.User.mother_name,
-        address: account.User.address,
+        id: application.User.id,
+        name: application.User.name,
+        email: application.User.email,
+        contact: application.User.contact,
+        govIssueIdType: application.User.gov_issue_id_type,
+        govIssueIdImage: application.User.gov_issue_id_image,
+        fatherName: application.User.father_name,
+        motherName: application.User.mother_name,
+        address: application.User.address,
+        createdAt: application.created_at,
+        updatedAt: application.updated_at,
       };
     }
 
     response.push(data);
   }
 
-  if (!res.data.rows) {
+  if (!res.data.applications) {
     res.data = response[0];
   } else {
-    res.data.rows = response;
+    res.data.applications = response;
   }
 
   next();

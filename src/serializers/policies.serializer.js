@@ -1,12 +1,12 @@
 const serialize = (req, res, next) => {
-  let { rows } = res.data;
+  let { policies } = res.data;
   let response = [];
 
-  if (!rows) {
-    rows = [res.data];
+  if (!policies) {
+    policies = [res.data];
   }
 
-  for (const policy of rows) {
+  for (const policy of policies) {
     const data = {};
     data.id = policy.id;
     data.bankId = policy.bank_id;
@@ -16,14 +16,16 @@ const serialize = (req, res, next) => {
     data.minimumAmount = policy.minimum_amount;
     data.lockInPeriod = policy.lock_in_period;
     data.penaltyFee = policy.penalty_fee;
+    data.createdAt = policy.created_at;
+    data.updatedAt = policy.updated_at;
 
     response.push(data);
   }
 
-  if (!res.data.rows) {
+  if (!res.data.policies) {
     res.data = response[0];
   } else {
-    res.data.rows = response;
+    res.data.policies = response;
   }
 
   next();
