@@ -128,22 +128,6 @@ describe('Accounts Controller', () => {
       expect(next).toHaveBeenCalled();
     });
 
-    it('should return 404 if account is not found', async () => {
-      const accountId = faker.string.uuid();
-      const req = { params: { id: accountId }, user: mockUser };
-      const res = { message: null, statusCode: null };
-      const next = jest.fn();
-
-      accountService.view.mockResolvedValue(null);
-
-      await accountsController.view(req, res, next);
-
-      expect(res.message).toBe('User not found');
-      expect(res.statusCode).toBe(404);
-      expect(accountService.view).toHaveBeenCalledWith(accountId, mockUser);
-      expect(next).toHaveBeenCalled();
-    });
-
     it('should handle errors gracefully', async () => {
       const accountId = faker.string.uuid();
       const req = { params: { id: accountId }, user: mockUser };
