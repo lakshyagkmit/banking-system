@@ -64,7 +64,7 @@ async function register(payload, file) {
     await transaction.commit();
     notificationHelper.sendOtp(email);
 
-    return newUser;
+    return;
   } catch (error) {
     await transaction.rollback();
     throw error;
@@ -112,6 +112,11 @@ async function login(email) {
  * and includes the user's role in the token payload.
  */
 async function verifyOtp(email, otp) {
+  const existingUser = await User.findOne({ where: { email, is_verified: true } });
+  if (!existingUser) {
+    commonHelper.customError(`User with email ${email} does not exist`, 404);
+  }
+
   if (!(await otpHelper.verifyOtp(email, otp))) {
     commonHelper.customError('Invalid OTP', 400);
   }

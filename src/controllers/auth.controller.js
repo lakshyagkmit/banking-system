@@ -4,7 +4,8 @@ const commonHelper = require('../helpers/commonFunctions.helper');
 async function register(req, res, next) {
   try {
     const { body, file } = req;
-    res.data = await authService.register(body, file);
+    await authService.register(body, file);
+    res.message = 'User registered successfully, move forward to verify email';
     res.statusCode = 201;
     next();
   } catch (error) {

@@ -3,7 +3,7 @@ const process = require('process');
 require('dotenv').config();
 
 const redisClient = redis.createClient({
-  host: process.env.PROCESS_HOST,
+  host: process.env.REDIS_HOST,
   port: process.env.REDIS_PORT
 });
 

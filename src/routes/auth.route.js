@@ -14,7 +14,6 @@ router.post(
   multerMiddleware.upload.single('govIssueIdImage'),
   authValidator.registerSchema,
   authController.register,
-  userSerializer.serialize,
   commonHelper.sendResponse
 );
 router.post('/verify-email', authValidator.otpSchema, authController.verifyEmail, commonHelper.sendResponse);
