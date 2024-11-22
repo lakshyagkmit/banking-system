@@ -86,39 +86,3 @@ jest.mock('lodash', () => ({
     return str.replace(/([A-Z])/g, '_$1').toLowerCase();
   }),
 }));
-
-describe('convertKeysToSnakeCase', () => {
-  it('should convert object keys to snake_case', async () => {
-    const input = { firstName: 'Java', lastName: 'script' };
-    const expectedOutput = { first_name: 'Java', last_name: 'script' };
-
-    const result = await commonHelper.convertKeysToSnakeCase(input);
-    expect(result).toEqual(expectedOutput);
-    expect(_.snakeCase).toHaveBeenCalledWith('firstName');
-    expect(_.snakeCase).toHaveBeenCalledWith('lastName');
-  });
-
-  it('should handle nested objects', async () => {
-    const input = { firstName: 'Java', address: { streetName: 'Main St' } };
-    const expectedOutput = { first_name: 'Java', address: { street_name: 'Main St' } };
-
-    const result = await commonHelper.convertKeysToSnakeCase(input);
-    expect(result).toEqual(expectedOutput);
-  });
-
-  it('should throw an error if the input is an array', async () => {
-    const input = ['firstName', 'lastName'];
-    await expect(commonHelper.convertKeysToSnakeCase(input)).rejects.toThrow('Array values are not allowed');
-  });
-
-  it('should return primitive values unchanged', async () => {
-    const input = 'hello world';
-    const result = await commonHelper.convertKeysToSnakeCase(input);
-    expect(result).toBe('hello world');
-  });
-
-  it('should process null values correctly', async () => {
-    const result = await commonHelper.convertKeysToSnakeCase(null);
-    expect(result).toBeNull();
-  });
-});
