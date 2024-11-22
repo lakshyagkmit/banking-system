@@ -5,7 +5,7 @@ async function create(req, res, next) {
   try {
     const { params, body, user } = req;
     const { accountId } = params;
-    res.data = await transactionService.create(accountId, body, user);
+    res.message = await transactionService.create(accountId, body, user);
     res.statusCode = 201;
     next();
   } catch (error) {

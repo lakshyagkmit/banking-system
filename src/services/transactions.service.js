@@ -78,7 +78,7 @@ async function create(accountId, payload, user) {
         balanceAfter
       );
 
-      return { message: 'Withdrawal successful' };
+      return 'Withdrawal successful';
     } else if (type === TRANSACTION_TYPES.DEPOSIT) {
       const balanceBefore = parseFloat(account.balance);
       const balanceAfter = parseFloat((balanceBefore + parsedAmount).toFixed(2));
@@ -108,7 +108,7 @@ async function create(accountId, payload, user) {
         balanceAfter
       );
 
-      return { message: 'Deposit successful' };
+      return 'Deposit successful';
     }
 
     if (account.status === STATUS.INACTIVE) {
@@ -182,7 +182,7 @@ async function create(accountId, payload, user) {
       toBalanceAfter
     );
 
-    return { message: 'Transfer successful' };
+    return 'Transfer successful';
   } catch (error) {
     await transaction.rollback();
 

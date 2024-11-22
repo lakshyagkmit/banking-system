@@ -64,7 +64,7 @@ async function register(payload, file) {
     await transaction.commit();
     notificationHelper.sendOtp(email);
 
-    return;
+    return newUser;
   } catch (error) {
     await transaction.rollback();
     throw error;

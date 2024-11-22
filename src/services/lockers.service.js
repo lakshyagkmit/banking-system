@@ -81,7 +81,7 @@ async function assign(payload, user) {
     await transaction.commit();
     notificationHelper.lockerAssignedNotification(email, lockerSerialNo);
 
-    return { message: 'Locker assigned successfully' };
+    return;
   } catch (error) {
     await transaction.rollback();
     throw error;
@@ -121,7 +121,7 @@ async function create(payload, user) {
   }
 
   await Locker.bulkCreate(lockers);
-  return { message: `${numberOfLockers} lockers added successfully` };
+  return;
 }
 
 // list lockers based on role

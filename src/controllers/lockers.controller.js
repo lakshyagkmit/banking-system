@@ -4,7 +4,8 @@ const commonHelper = require('../helpers/commonFunctions.helper');
 async function assign(req, res, next) {
   try {
     const { body, user } = req;
-    res.data = await lockerService.assign(body, user);
+    await lockerService.assign(body, user);
+    res.message = 'Locker assigned successfully';
     res.statusCode = 200;
     next();
   } catch (error) {
@@ -15,7 +16,8 @@ async function assign(req, res, next) {
 async function create(req, res, next) {
   try {
     const { body, user } = req;
-    res.data = await lockerService.create(body, user);
+    await lockerService.create(body, user);
+    res.message = 'Locker assigned successfully';
     res.statusCode = 201;
     next();
   } catch (error) {
