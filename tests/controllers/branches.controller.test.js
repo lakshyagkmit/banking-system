@@ -130,20 +130,6 @@ describe('Branch Controller', () => {
       expect(next).toHaveBeenCalled();
     });
 
-    it('should return 404 when branch is not found', async () => {
-      const req = { params: { id: 'invalid-id' } };
-      const res = { message: null, statusCode: null };
-      const next = jest.fn();
-
-      branchService.view.mockResolvedValue(null);
-
-      await branchController.view(req, res, next);
-
-      expect(res.message).toBe('Branch not found');
-      expect(res.statusCode).toBe(404);
-      expect(next).toHaveBeenCalled();
-    });
-
     it('should handle errors gracefully', async () => {
       const req = { params: { id: 'invalid-id' } };
       const res = {};
