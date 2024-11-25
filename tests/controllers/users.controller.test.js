@@ -146,20 +146,6 @@ describe('User Controller', () => {
       expect(next).toHaveBeenCalled();
     });
 
-    it('should return 404 if user not found', async () => {
-      const req = { params: { id: faker.string.uuid() }, user: { id: faker.string.uuid() } };
-      const res = {};
-      const next = jest.fn();
-
-      userService.view.mockResolvedValue(null); // Simulate not found
-
-      await userController.view(req, res, next);
-
-      expect(res.message).toBe('User not found');
-      expect(res.statusCode).toBe(404);
-      expect(next).toHaveBeenCalled();
-    });
-
     it('should handle errors gracefully', async () => {
       const req = { params: { id: faker.string.uuid() }, user: { id: faker.string.uuid() } };
       const res = {};

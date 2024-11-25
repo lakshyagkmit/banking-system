@@ -119,7 +119,7 @@ describe('Auth Controller', () => {
 
       await authController.login(req, res, next);
 
-      expect(res.message).toBe('OTP Sent on email');
+      expect(res.message).toBe('OTP sent on email');
       expect(res.statusCode).toBe(200);
       expect(authService.login).toHaveBeenCalledWith(req.body.email);
       expect(next).toHaveBeenCalled();
@@ -153,7 +153,7 @@ describe('Auth Controller', () => {
       await authController.verifyOtp(req, res, next);
 
       expect(res.token).toBe(mockToken);
-      expect(res.message).toBe('OTP Sent on email');
+      expect(res.message).toBe('OTP sent on email');
       expect(res.statusCode).toBe(200);
       expect(authService.verifyOtp).toHaveBeenCalledWith(req.body.email, req.body.otp);
       expect(next).toHaveBeenCalled();
@@ -185,7 +185,7 @@ describe('Auth Controller', () => {
 
       await authController.resendOtp(req, res, next);
 
-      expect(res.message).toBe('OTP Resent to email');
+      expect(res.message).toBe('OTP resent to email');
       expect(res.statusCode).toBe(200);
       expect(authService.resendOtp).toHaveBeenCalledWith(req.body.email);
       expect(next).toHaveBeenCalled();

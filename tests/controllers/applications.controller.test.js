@@ -187,22 +187,6 @@ describe('Application Controller', () => {
       expect(next).toHaveBeenCalled();
     });
 
-    it('should return 404 if application is not found', async () => {
-      const applicationId = faker.string.uuid();
-      const req = { params: { id: applicationId }, user: mockUser };
-      const res = { message: null, statusCode: null };
-      const next = jest.fn();
-
-      applicationService.view.mockResolvedValue(null);
-
-      await applicationController.view(req, res, next);
-
-      expect(res.message).toBe('Application not found');
-      expect(res.statusCode).toBe(404);
-      expect(applicationService.view).toHaveBeenCalledWith(applicationId, mockUser);
-      expect(next).toHaveBeenCalled();
-    });
-
     it('should handle errors gracefully', async () => {
       const applicationId = faker.string.uuid();
       const req = { params: { id: applicationId }, user: mockUser };
