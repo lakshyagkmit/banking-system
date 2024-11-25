@@ -22,7 +22,7 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.UUID,
         allowNull: false,
       },
-      account_no: {
+      target_account_no: {
         type: DataTypes.STRING(20),
       },
       type: {

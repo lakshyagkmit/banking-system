@@ -2,14 +2,7 @@
 const { Model } = require('sequelize');
 
 module.exports = (sequelize, DataTypes) => {
-  class AccountPolicy extends Model {
-    static associate(models) {
-      // Define association with banks table
-      AccountPolicy.belongsTo(models.Bank, {
-        foreignKey: 'bank_id',
-      });
-    }
-  }
+  class AccountPolicy extends Model {}
 
   AccountPolicy.init(
     {
@@ -17,10 +10,6 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.UUID,
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
-      },
-      bank_id: {
-        type: DataTypes.UUID,
-        allowNull: false,
       },
       account_type: {
         type: DataTypes.ENUM('savings', 'current', 'fixed', 'recurring'),
