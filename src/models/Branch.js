@@ -11,7 +11,7 @@ module.exports = (sequelize, DataTypes) => {
 
       // Branch managed by a bran
       Branch.belongsTo(models.User, {
-        foreignKey: 'user_id',
+        foreignKey: 'branch_manager_id',
       });
     }
   }
@@ -27,7 +27,7 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.UUID,
         allowNull: false,
       },
-      user_id: {
+      branch_manager_id: {
         type: DataTypes.UUID,
         allowNull: false,
       },
