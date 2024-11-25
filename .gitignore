@@ -16,3 +16,6 @@ package-lock.json
 
 #tests
 coverage
+
+data
+dumps
