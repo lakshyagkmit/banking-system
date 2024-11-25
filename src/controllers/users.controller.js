@@ -23,6 +23,18 @@ async function index(req, res, next) {
   }
 }
 
+async function viewMe(req, res, next) {
+  try {
+    const { user } = req;
+    const { id } = user;
+    res.data = await userService.viewMe(id);
+    res.statusCode = 200;
+    next();
+  } catch (error) {
+    commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
+  }
+}
+
 async function view(req, res, next) {
   try {
     const { params, user } = req;
@@ -61,4 +73,4 @@ async function remove(req, res, next) {
   }
 }
 
-module.exports = { create, index, view, update, remove };
+module.exports = { create, index, viewMe, view, update, remove };
