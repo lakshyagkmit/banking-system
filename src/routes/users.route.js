@@ -31,6 +31,14 @@ router.get(
 );
 
 router.get(
+  '/me',
+  authMiddleware.checkAuthToken,
+  userController.viewMe,
+  userSerializer.serialize,
+  commonHelper.sendResponse
+);
+
+router.get(
   '/:id',
   authMiddleware.checkAuthToken,
   commonValidator.idSchema,
