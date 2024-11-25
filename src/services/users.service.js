@@ -111,13 +111,28 @@ async function index(query, user) {
 }
 
 // Get a user by ID with access control
+async function viewMe(id) {
+  const user = await User.findOne({
+    where: { id },
+    include: {
+      model: Role,
+      through: { attributes: [] },
+    },
+  });
+
+  if (!user) {
+    return commonHelper.customError('User not found', 404);
+  }
+
+  return user;
+}
+
+// Get a user by ID with access control
 async function view(id, user) {
   const { role } = user;
 
   let roles;
-  if (user.id === id) {
-    roles = [role];
-  } else if (role === ROLES['101']) {
+  if (role === ROLES['101']) {
     roles = [ROLES['102'], ROLES['103']];
   } else {
     roles = ROLES['103'];
@@ -259,4 +274,4 @@ async function remove(id, user) {
   }
 }
 
-module.exports = { create, index, view, update, remove };
+module.exports = { create, index, viewMe, view, update, remove };
