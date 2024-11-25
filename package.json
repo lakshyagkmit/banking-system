@@ -8,7 +8,16 @@
     "dev": "nodemon src/index.js",
     "format": "npx prettier --write \"./**/*.{js,jsx}\"",
     "lint": "npx eslint ./",
-    "test": "jest --coverage"
+    "test": "jest --coverage",
+    "db:migration:generate": "npx sequelize-cli migration:generate --name",
+    "db:migration:create": "npx sequelize-cli migration:create --name",
+    "db:migration:up": "npx sequelize-cli db:migrate",
+    "db:migration:down": "npx sequelize-cli db:migrate:undo",
+    "db:migration:down:all": "npx sequelize-cli db:migrate:undo:all",
+    "db:seed:generate": "npx sequelize-cli seed:generate --name",
+    "db:seed:all": "npx sequelize-cli db:seed:all",
+    "db:seed:undo": "npx sequelize-cli db:seed:undo --seed",
+    "db:seed:undo:all": "npx sequelize-cli db:seed:undo:all"
   },
   "repository": {
     "type": "git",
