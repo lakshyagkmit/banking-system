@@ -3,8 +3,13 @@ const commonHelper = require('../helpers/commonFunctions.helper');
 
 async function create(req, res, next) {
   try {
-    const { body, file, user } = req;
-    res.data = await userService.create(body, file, user);
+    const payload = {
+      data: req.body,
+      file: req.file,
+      user: req.user,
+    };
+    await userService.create(payload);
+    res.message = 'User created successfully';
     res.statusCode = 201;
     next();
   } catch (error) {
@@ -14,8 +19,25 @@ async function create(req, res, next) {
 
 async function index(req, res, next) {
   try {
-    const { query, user } = req;
-    res.data = await userService.index(query, user);
+    const payload = {
+      query: req.query,
+      user: req.user,
+    };
+    res.data = await userService.index(payload);
+    res.statusCode = 200;
+    next();
+  } catch (error) {
+    commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
+  }
+}
+
+async function view(req, res, next) {
+  try {
+    const payload = {
+      id: req.params.id,
+      user: req.user,
+    };
+    res.data = await userService.view(payload);
     res.statusCode = 200;
     next();
   } catch (error) {
@@ -35,23 +57,14 @@ async function viewMe(req, res, next) {
   }
 }
 
-async function view(req, res, next) {
-  try {
-    const { params, user } = req;
-    const { id } = params;
-    res.data = await userService.view(id, user);
-    res.statusCode = 200;
-    next();
-  } catch (error) {
-    commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
-  }
-}
-
 async function update(req, res, next) {
   try {
-    const { params, body, user } = req;
-    const { id } = params;
-    res.data = await userService.update(id, body, user);
+    const payload = {
+      id: req.params.id,
+      data: req.body,
+      user: req.user,
+    };
+    res.data = await userService.update(payload);
     res.message = 'User updated successfully';
     res.statusCode = 200;
     next();
@@ -60,12 +73,12 @@ async function update(req, res, next) {
   }
 }
 
-async function remove(req, res, next) {
+async function removeManager(req, res, next) {
   try {
-    const { params, user } = req;
+    const { params } = req;
     const { id } = params;
-    await userService.remove(id, user);
-    res.message = 'user deleted successfully';
+    await userService.removeManager(id);
+    res.message = 'Branch Manager deleted successfully';
     res.statusCode = 204;
     next();
   } catch (error) {
@@ -73,4 +86,19 @@ async function remove(req, res, next) {
   }
 }
 
-module.exports = { create, index, viewMe, view, update, remove };
+async function removeCustomer(req, res, next) {
+  try {
+    const payload = {
+      id: req.params.id,
+      user: req.user,
+    };
+    await userService.removeCustomer(payload);
+    res.message = 'Customer deleted successfully';
+    res.statusCode = 204;
+    next();
+  } catch (error) {
+    commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
+  }
+}
+
+module.exports = { create, index, viewMe, view, update, removeManager, removeCustomer };
