@@ -25,29 +25,15 @@ async function register(payload) {
       },
       include: {
         model: Role,
-        attributes: ['id', 'code'],
         through: { attributes: [] },
       },
     });
 
     if (existingUser) {
-      const hasRole = existingUser.Roles.some(userRole => userRole.code === ROLES['103']);
-
-      if (hasRole) {
-        return commonHelper.customError(
-          `User with ${existingUser.email === email ? 'email' : 'contact'} already exists with the role ${ROLES['103']}`,
-          409
-        );
-      }
-
-      const usersRole = await Role.findOne({
-        where: { code: ROLES['103'] },
-      });
-
-      await existingUser.addRole(usersRole, { transaction });
-
-      await transaction.commit();
-      return existingUser;
+      return commonHelper.customError(
+        `User with ${existingUser.email === email ? 'email' : 'contact'} already exists`,
+        409
+      );
     }
 
     if (!file) {
