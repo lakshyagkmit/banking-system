@@ -3,8 +3,10 @@ const commonHelper = require('../helpers/commonFunctions.helper');
 
 async function create(req, res, next) {
   try {
-    const { body } = req;
-    res.data = await branchService.create(body);
+    const payload = {
+      data: req.body,
+    };
+    res.data = await branchService.create(payload);
     res.statusCode = 201;
     next();
   } catch (error) {
@@ -14,8 +16,10 @@ async function create(req, res, next) {
 
 async function index(req, res, next) {
   try {
-    const { query } = req;
-    res.data = await branchService.index(query);
+    const payload = {
+      query: req.query,
+    };
+    res.data = await branchService.index(payload);
     res.statusCode = 200;
     next();
   } catch (error) {
@@ -36,9 +40,11 @@ async function view(req, res, next) {
 
 async function update(req, res, next) {
   try {
-    const { params, body } = req;
-    const { id } = params;
-    res.data = await branchService.update(id, body);
+    const payload = {
+      data: req.body,
+      id: req.params.id,
+    };
+    res.data = await branchService.update(payload);
     res.message = 'Branch updated successfully';
     res.statusCode = 200;
     next();
