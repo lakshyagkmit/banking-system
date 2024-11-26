@@ -15,6 +15,10 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'user_id',
         otherKey: 'locker_id',
       });
+
+      User.hasMany(models.UserAccount, {
+        foreignKey: 'user_id',
+      });
     }
   }
 
