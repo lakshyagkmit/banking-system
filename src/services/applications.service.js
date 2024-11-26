@@ -29,13 +29,14 @@ async function requestAccount(payload) {
     return commonHelper.customError('No branch Found.', 404);
   }
 
-  const branchManager = await User.findOne({
-    where: {
-      id: branch.branch_manager_id,
-    },
-  });
+  const [branchManager, customer] = await Promise.all([
+    User.findByPk(branch.branch_manager_id),
+    User.findByPk(id),
+  ]);
 
-  const customer = await User.findByPk(id);
+  if (!branchManager || !customer) {
+    return commonHelper.customError('User not found', 404);
+  }
 
   const newRequest = await UserApplication.create({
     user_id: id,
@@ -83,13 +84,14 @@ async function requestLocker(payload) {
     return commonHelper.customError('Locker already exist', 409);
   }
 
-  const branchManager = await User.findOne({
-    where: {
-      id: branch.branch_manager_id,
-    },
-  });
+  const [branchManager, customer] = await Promise.all([
+    User.findByPk(branch.branch_manager_id),
+    User.findByPk(id),
+  ]);
 
-  const customer = await User.findByPk(id);
+  if (!branchManager || !customer) {
+    return commonHelper.customError('User not found', 404);
+  }
 
   const newRequest = await UserApplication.create({
     user_id: id,
