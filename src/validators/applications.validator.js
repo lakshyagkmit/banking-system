@@ -1,14 +1,14 @@
 const Joi = require('joi');
 const validateHelper = require('../helpers/validates.helper');
-const constants = require('../constants/constants');
+const { APPLICATION_TYPES } = require('../constants/constants');
 
 //request account validator
 async function accountSchema(req, res, next) {
   const schema = Joi.object({
     branchIfscCode: Joi.string().max(20).required(),
     type: Joi.string()
-      .valid(constants.APPLICATION_TYPES.SAVINGS, constants.APPLICATION_TYPES.CURRENT)
-      .required(),
+      .valid(APPLICATION_TYPES.SAVINGS, APPLICATION_TYPES.CURRENT)
+      .default(APPLICATION_TYPES.SAVINGS),
     nomineeName: Joi.string().max(50).required(),
   });
 
@@ -17,7 +17,7 @@ async function accountSchema(req, res, next) {
 
 async function lockerSchema(req, res, next) {
   const schema = Joi.object({
-    type: Joi.string().valid(constants.APPLICATION_TYPES.LOCKER).required(),
+    type: Joi.string().valid(APPLICATION_TYPES.LOCKER).required(),
   });
 
   validateHelper.validateRequest(req, res, next, schema, 'body');
