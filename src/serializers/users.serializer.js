@@ -20,16 +20,6 @@ const serialize = (req, res, next) => {
     data.createdAt = user.created_at;
     data.updatedAt = user.updated_at;
 
-    if (user.Roles) {
-      data.roles = user.Roles.map(role => ({
-        id: role.id,
-        name: role.name,
-        code: role.code,
-        createdAt: role.created_at,
-        updatedAt: role.updated_at,
-      }));
-    }
-
     response.push(data);
   }
 

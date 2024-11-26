@@ -35,31 +35,13 @@ async function create(payload) {
       where: {
         [Op.or]: [{ email }, { contact }],
       },
-      include: {
-        model: Role,
-        attributes: ['id', 'code'],
-        through: { attributes: [] },
-      },
     });
 
     if (existingUser) {
-      const hasRole = existingUser.Roles.some(userRole => userRole.code === roleCode);
-
-      if (hasRole) {
-        return commonHelper.customError(
-          `User with ${existingUser.email === email ? 'email' : 'contact'} already exists with the role ${roleCode}`,
-          409
-        );
-      }
-
-      const usersRole = await Role.findOne({
-        where: { code: roleCode },
-      });
-
-      await existingUser.addRole(usersRole, { transaction });
-
-      await transaction.commit();
-      return existingUser;
+      return commonHelper.customError(
+        `User with ${existingUser.email === email ? 'email' : 'contact'} already exists`,
+        409
+      );
     }
 
     if (!file) {
@@ -235,7 +217,7 @@ async function view(payload) {
   return userRecord;
 }
 
-// Update a user (Admins can update any user, Branch Managers their customers)
+// Update a user (Only accessed to admin)
 async function update(payload) {
   const { id, data, user } = payload;
   const { name, email, contact, fatherName, motherName, address } = data;
@@ -292,13 +274,67 @@ async function update(payload) {
   return updatedUser;
 }
 
-// Remove branch manager
-async function removeManager(id) {
+// Remove user
+async function remove(id) {
   const transaction = await sequelize.transaction();
 
   try {
-    const deleteManager = await User.findOne({
+    const deleteUser = await User.findOne({
       where: { id },
+      include: [
+        {
+          model: Role,
+          through: { attributes: [] },
+        },
+        {
+          model: UserAccount,
+        },
+      ],
+    });
+
+    if (!deleteUser) {
+      return commonHelper.customError('User not found', 404);
+    }
+
+    const isBranchManager = deleteUser.Roles.some(role => role.code === ROLES['102']);
+    if (isBranchManager) {
+      const isManagingBranch = await Branch.findOne({
+        where: { branch_manager_id: id },
+      });
+
+      if (isManagingBranch) {
+        return commonHelper.customError('Cannot delete a Branch Manager assigned to a branch', 409);
+      }
+    }
+
+    const isCustomer = deleteUser.Roles.some(role => role.code === ROLES['103']);
+    if (isCustomer && deleteUser.UserAccounts.length > 0) {
+      return commonHelper.customError('Cannot delete a customer with an active account', 409);
+    }
+
+    for (const role of deleteUser.Roles) {
+      await deleteUser.removeRole(role, { transaction });
+    }
+
+    await deleteUser.destroy({ transaction });
+
+    await transaction.commit();
+    return { message: 'User removed successfully' };
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+}
+
+// Update a user role
+async function updateRoles(payload) {
+  const { id: userId, data } = payload;
+  const { rolesToAdd = [], rolesToRemove = [] } = data;
+  const transaction = await sequelize.transaction();
+
+  try {
+    const user = await User.findOne({
+      where: { id: userId },
       include: [
         {
           model: Role,
@@ -307,98 +343,63 @@ async function removeManager(id) {
       ],
     });
 
-    if (!deleteManager) {
+    if (!user) {
       return commonHelper.customError('User not found', 404);
     }
 
-    const isBranchManager = deleteManager.Roles.some(role => role.code === ROLES['102']);
-    if (!isBranchManager) {
-      return commonHelper.customError('User is not a branch manager', 400);
+    for (const roleCode of rolesToAdd) {
+      const hasRole = user.Roles.some(userRole => userRole.code === roleCode);
+      if (!hasRole) {
+        const role = await Role.findOne({ where: { code: roleCode } });
+        await user.addRole(role, { transaction });
+      }
     }
 
-    const isManagingBranch = await Branch.findOne({
-      where: { branch_manager_id: id },
-    });
-
-    if (isManagingBranch) {
-      return commonHelper.customError('Cannot delete a Branch Manager assigned to a branch', 409);
-    }
-
-    const managerRole = deleteManager.Roles.find(role => role.code === ROLES['102']);
-
-    if (deleteManager.Roles.length > 1) {
-      await deleteManager.removeRole(managerRole, { transaction });
-    } else {
-      await deleteManager.destroy({ transaction });
-      await deleteManager.removeRole(managerRole, { transaction });
-    }
-
-    await transaction.commit();
-    return { message: 'Branch manager removed successfully' };
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
-  }
-}
-
-// remove customer
-async function removeCustomer(payload) {
-  const { id, user } = payload;
-  const { roles, id: userId } = user;
-  const role = roles.includes(ROLES['101']) ? ROLES['101'] : ROLES['102'];
-
-  const transaction = await sequelize.transaction();
-
-  try {
-    const include = [
-      {
-        model: Role,
-        through: { attributes: [] },
-      },
-    ];
-
-    let whereCondition = {};
-
-    if (role === ROLES['102']) {
-      const branch = await Branch.findOne({ where: { branch_manager_id: userId }, attributes: ['id'] });
-
-      if (!branch) return commonHelper.customError('No branches managed by this user', 403);
-
-      whereCondition = { branch_id: branch.id };
-      include.push({
-        model: UserAccount,
-        where: whereCondition,
+    if (rolesToRemove.includes(ROLES['102'])) {
+      const managingBranch = await Branch.findOne({
+        where: { branch_manager_id: userId },
       });
+
+      if (managingBranch) {
+        return commonHelper.customError(
+          'Cannot remove the branch manager role while the user is assigned to a branch',
+          409
+        );
+      }
     }
 
-    const deleteCustomer = await User.findOne({
-      where: { id },
-      include,
-    });
+    if (rolesToRemove.includes(ROLES['103'])) {
+      const hasActiveAccounts = await UserAccount.findOne({
+        where: { user_id: userId },
+      });
 
-    if (!deleteCustomer) {
-      return commonHelper.customError('Customer not found', 404);
+      if (hasActiveAccounts) {
+        return commonHelper.customError(
+          'Cannot remove the customer role while the user has active accounts',
+          409
+        );
+      }
     }
 
-    if (deleteCustomer.UserAccounts && deleteCustomer.UserAccounts.length !== 0) {
-      return commonHelper.customError('Cannot delete a customer with an active account', 409);
-    }
-
-    const customerRole = deleteCustomer.Roles.find(role => role.code === ROLES['103']);
-
-    if (deleteCustomer.Roles.length > 1) {
-      await deleteCustomer.removeRole(customerRole, { transaction });
-    } else {
-      await deleteCustomer.destroy({ transaction });
-      await deleteCustomer.removeRole(customerRole, { transaction });
+    for (const roleCode of rolesToRemove) {
+      const hasRole = user.Roles.some(userRole => userRole.code === roleCode);
+      if (hasRole) {
+        const role = await Role.findOne({ where: { code: roleCode } });
+        await user.removeRole(role, { transaction });
+      }
     }
 
     await transaction.commit();
-    return { message: 'Customer removed successfully' };
+    return {
+      updatedRoles: {
+        added: rolesToAdd,
+        removed: rolesToRemove,
+      },
+    };
   } catch (error) {
     await transaction.rollback();
     throw error;
   }
 }
 
-module.exports = { create, index, view, viewMe, update, removeManager, removeCustomer };
+module.exports = { create, index, view, viewMe, update, remove, updateRoles };
