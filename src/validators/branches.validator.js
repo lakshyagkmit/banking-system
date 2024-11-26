@@ -4,7 +4,7 @@ const validateHelper = require('../helpers/validates.helper');
 // create branch validator
 async function createSchema(req, res, next) {
   const schema = Joi.object({
-    userId: Joi.string()
+    branchManagerId: Joi.string()
       .trim()
       .guid({ version: ['uuidv4'] })
       .required(),
@@ -18,7 +18,7 @@ async function createSchema(req, res, next) {
 
 async function updateSchema(req, res, next) {
   const schema = Joi.object({
-    userId: Joi.string()
+    branchManagerId: Joi.string()
       .trim()
       .guid({ version: ['uuidv4'] })
       .optional(),
