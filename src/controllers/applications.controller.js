@@ -3,8 +3,11 @@ const commonHelper = require('../helpers/commonFunctions.helper');
 
 async function requestAccount(req, res, next) {
   try {
-    const { body, user } = req;
-    res.data = await applicationService.requestAccount(body, user);
+    const payload = {
+      data: req.body,
+      user: req.user,
+    };
+    res.data = await applicationService.requestAccount(payload);
     res.statusCode = 201;
     next();
   } catch (error) {
@@ -14,8 +17,11 @@ async function requestAccount(req, res, next) {
 
 async function requestLocker(req, res, next) {
   try {
-    const { body, user } = req;
-    res.data = await applicationService.requestLocker(body, user);
+    const payload = {
+      data: req.body,
+      user: req.user,
+    };
+    res.data = await applicationService.requestLocker(payload);
     res.statusCode = 201;
     next();
   } catch (error) {
@@ -25,8 +31,11 @@ async function requestLocker(req, res, next) {
 
 async function index(req, res, next) {
   try {
-    const { query, user } = req;
-    res.data = await applicationService.index(query, user);
+    const payload = {
+      query: req.query,
+      user: req.user,
+    };
+    res.data = await applicationService.index(payload);
     res.statusCode = 201;
     next();
   } catch (error) {
@@ -36,9 +45,11 @@ async function index(req, res, next) {
 
 async function view(req, res, next) {
   try {
-    const { params, user } = req;
-    const { id } = params;
-    res.data = await applicationService.view(id, user);
+    const payload = {
+      id: req.params.id,
+      user: req.user,
+    };
+    res.data = await applicationService.view(payload);
     res.statusCode = 201;
     next();
   } catch (error) {
