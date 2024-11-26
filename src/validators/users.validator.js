@@ -39,4 +39,35 @@ const updateSchema = async (req, res, next) => {
   validateHelper.validateRequest(req, res, next, schema, 'body');
 };
 
-module.exports = { createSchema, updateSchema };
+const rolesUpdateSchema = async (req, res, next) => {
+  const schema = Joi.object({
+    rolesToAdd: Joi.array()
+      .items(
+        Joi.string()
+          .valid(ROLES['102'], ROLES['103'])
+          .messages({
+            'any.only': `Each roleToUpdate must be one of ${ROLES['102']} (Branch Manager) or ${ROLES['103']} (Customer).`,
+          })
+      )
+      .optional()
+      .messages({
+        'array.base': 'rolesToUpdate must be an array.',
+      }),
+    rolesToRemove: Joi.array()
+      .items(
+        Joi.string()
+          .valid(ROLES['102'], ROLES['103'])
+          .messages({
+            'any.only': `Each roleToRemove must be one of ${ROLES['102']} (Branch Manager) or ${ROLES['103']} (Customer).`,
+          })
+      )
+      .optional()
+      .messages({
+        'array.base': 'rolesToRemove must be an array.',
+      }),
+  });
+
+  validateHelper.validateRequest(req, res, next, schema, 'body');
+};
+
+module.exports = { createSchema, updateSchema, rolesUpdateSchema };

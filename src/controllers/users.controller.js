@@ -73,12 +73,12 @@ async function update(req, res, next) {
   }
 }
 
-async function removeManager(req, res, next) {
+async function remove(req, res, next) {
   try {
     const { params } = req;
     const { id } = params;
-    await userService.removeManager(id);
-    res.message = 'Branch Manager deleted successfully';
+    await userService.remove(id);
+    res.message = 'User deleted successfully';
     res.statusCode = 204;
     next();
   } catch (error) {
@@ -86,19 +86,19 @@ async function removeManager(req, res, next) {
   }
 }
 
-async function removeCustomer(req, res, next) {
+async function updateRoles(req, res, next) {
   try {
     const payload = {
       id: req.params.id,
-      user: req.user,
+      data: req.body,
     };
-    await userService.removeCustomer(payload);
-    res.message = 'Customer deleted successfully';
-    res.statusCode = 204;
+    res.data = await userService.updateRoles(payload);
+    res.message = 'User roles updated successfully';
+    res.statusCode = 200;
     next();
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
   }
 }
 
-module.exports = { create, index, viewMe, view, update, removeManager, removeCustomer };
+module.exports = { create, index, viewMe, view, update, remove, updateRoles };

@@ -59,20 +59,22 @@ router.put(
 );
 
 router.delete(
-  '/branch-managers/:id',
+  '/:id',
   authMiddleware.checkAuthToken,
   authMiddleware.authorizeRole(ROLES['101']),
   commonValidator.idSchema,
-  userController.removeManager,
+  userController.remove,
   commonHelper.sendResponse
 );
 
-router.delete(
-  '/customers/:id',
+router.patch(
+  '/:id/roles',
   authMiddleware.checkAuthToken,
-  authMiddleware.authorizeRole([ROLES['101'], ROLES['102']]),
+  authMiddleware.authorizeRole(ROLES['101']),
   commonValidator.idSchema,
-  userController.removeCustomer,
+  userValidator.rolesUpdateSchema,
+  userController.updateRoles,
+  userSerializer.serialize,
   commonHelper.sendResponse
 );
 
