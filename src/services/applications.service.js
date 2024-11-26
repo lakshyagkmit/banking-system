@@ -1,134 +1,117 @@
-const { User, UserAccount, Branch, UserApplication, UserLocker, sequelize } = require('../models');
+const { User, UserAccount, Branch, UserApplication, UserLocker } = require('../models');
 const { Op } = require('sequelize');
 const commonHelper = require('../helpers/commonFunctions.helper');
 const notificationHelper = require('../helpers/notifications.helper');
 const { STATUS, APPLICATION_TYPES } = require('../constants/constants');
 
 // request for creation of new account in the bank
-async function requestAccount(payload, user) {
-  const transaction = await sequelize.transaction();
-  try {
-    const { branchIfscCode, type, nomineeName } = payload;
-    const { id } = user;
+async function requestAccount(payload) {
+  const { data, user } = payload;
+  const { branchIfscCode, type, nomineeName } = data;
+  const { id } = user;
 
-    const account = await UserAccount.findOne({
-      where: {
-        user_id: id,
-        type,
-      },
-    });
+  const account = await UserAccount.findOne({
+    where: {
+      user_id: id,
+      type,
+    },
+  });
 
-    if (account) {
-      return commonHelper.customError('Account already exist', 409);
-    }
-
-    const branch = await Branch.findOne({
-      where: { ifsc_code: branchIfscCode },
-    });
-
-    if (!branch) {
-      return commonHelper.customError('No branch Found.', 404);
-    }
-
-    const branchManager = await User.findOne({
-      where: {
-        id: branch.user_id,
-      },
-    });
-
-    const customer = await User.findByPk(id);
-
-    const newRequest = await UserApplication.create(
-      {
-        user_id: id,
-        branch_ifsc_code: branchIfscCode,
-        type: type,
-        nominee_name: nomineeName,
-      },
-      { transaction }
-    );
-
-    await transaction.commit();
-    notificationHelper.applicationRequestNotification(branchManager.email, customer.name, 'account');
-    notificationHelper.applicationSuccessNotification(customer.email, 'account');
-
-    return newRequest;
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
+  if (account) {
+    return commonHelper.customError('Account already exist', 409);
   }
+
+  const branch = await Branch.findOne({
+    where: { ifsc_code: branchIfscCode },
+  });
+
+  if (!branch) {
+    return commonHelper.customError('No branch Found.', 404);
+  }
+
+  const branchManager = await User.findOne({
+    where: {
+      id: branch.branch_manager_id,
+    },
+  });
+
+  const customer = await User.findByPk(id);
+
+  const newRequest = await UserApplication.create({
+    user_id: id,
+    branch_ifsc_code: branchIfscCode,
+    type: type,
+    nominee_name: nomineeName,
+  });
+
+  notificationHelper.applicationRequestNotification(branchManager.email, customer.name, 'account');
+  notificationHelper.applicationSuccessNotification(customer.email, 'account');
+
+  return newRequest;
 }
 
 // request for locker in the bank
-async function requestLocker(payload, user) {
-  const transaction = await sequelize.transaction();
-  try {
-    const { type } = payload;
-    const { id } = user;
+async function requestLocker(payload) {
+  const { data, user } = payload;
+  const { type } = data;
+  const { id } = user;
 
-    const account = await UserAccount.findOne({
-      where: {
-        user_id: id,
-      },
-    });
+  const account = await UserAccount.findOne({
+    where: {
+      user_id: id,
+    },
+  });
 
-    if (!account) {
-      return commonHelper.customError('Account does not exist, Cannot request for locker', 409);
-    }
-
-    const branch = await Branch.findByPk(account.branch_id);
-
-    if (!branch) {
-      return commonHelper.customError('No branch Found.', 404);
-    }
-
-    const locker = await UserLocker.findOne({
-      where: {
-        user_id: id,
-        status: STATUS.ACTIVE,
-      },
-    });
-
-    if (locker) {
-      return commonHelper.customError('Locker already exist', 409);
-    }
-
-    const branchManager = await User.findOne({
-      where: {
-        id: branch.user_id,
-      },
-    });
-
-    const customer = await User.findByPk(id);
-
-    const newRequest = await UserApplication.create(
-      {
-        user_id: id,
-        branch_ifsc_code: branch.ifsc_code,
-        type,
-      },
-      { transaction }
-    );
-
-    await transaction.commit();
-    notificationHelper.applicationRequestNotification(branchManager.email, customer.name, 'locker');
-    notificationHelper.applicationSuccessNotification(customer.email, 'locker');
-
-    return newRequest;
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
+  if (!account) {
+    return commonHelper.customError('Account does not exist, Cannot request for locker', 409);
   }
+
+  const branch = await Branch.findByPk(account.branch_id);
+
+  if (!branch) {
+    return commonHelper.customError('No branch Found.', 404);
+  }
+
+  const locker = await UserLocker.findOne({
+    where: {
+      user_id: id,
+      status: STATUS.ACTIVE,
+    },
+  });
+
+  if (locker) {
+    return commonHelper.customError('Locker already exist', 409);
+  }
+
+  const branchManager = await User.findOne({
+    where: {
+      id: branch.branch_manager_id,
+    },
+  });
+
+  const customer = await User.findByPk(id);
+
+  const newRequest = await UserApplication.create({
+    user_id: id,
+    branch_ifsc_code: branch.ifsc_code,
+    type,
+  });
+
+  notificationHelper.applicationRequestNotification(branchManager.email, customer.name, 'locker');
+  notificationHelper.applicationSuccessNotification(customer.email, 'locker');
+
+  return newRequest;
 }
 
 // List applications
-async function index(query, user) {
+async function index(payload) {
+  const { query, user } = payload;
   const { page, limit, requestType } = query;
   const offset = (page - 1) * limit;
 
   const branch = await Branch.findOne({
     where: {
-      user_id: user.id,
+      branch_manager_id: user.id,
     },
   });
 
@@ -151,7 +134,7 @@ async function index(query, user) {
     },
   });
 
-  if (!applications.rows.length) {
+  if (!applications) {
     return commonHelper.customError('No applications found', 404);
   }
 
@@ -164,10 +147,12 @@ async function index(query, user) {
 }
 
 // Get an application by id
-async function view(id, user) {
+async function view(payload) {
+  const { id, user } = payload;
+
   const branch = await Branch.findOne({
     where: {
-      user_id: user.id,
+      branch_manager_id: user.id,
     },
   });
 
