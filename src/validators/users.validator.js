@@ -1,6 +1,6 @@
 const Joi = require('joi');
 const validateHelper = require('../helpers/validates.helper');
-const constants = require('../constants/constants');
+const { ROLES, GOV_ISSUE_ID_TYPES } = require('../constants/constants');
 
 // user creation validator
 async function createSchema(req, res, next) {
@@ -11,11 +11,14 @@ async function createSchema(req, res, next) {
     contact: Joi.string()
       .pattern(/^\d{10}$/)
       .required(),
-    govIssueIdType: Joi.string().valid(...Object.values(constants.GOV_ISSUE_ID_TYPES)),
+    govIssueIdType: Joi.string()
+      .valid(...Object.values(GOV_ISSUE_ID_TYPES))
+      .default(GOV_ISSUE_ID_TYPES.ADHAR),
     fatherName: Joi.string().max(50),
     motherName: Joi.string().max(50),
     address: Joi.string(),
     isVerified: Joi.boolean().default(false),
+    roleCode: Joi.string().valid(ROLES['102'], ROLES['103']).default(ROLES['103']),
   });
 
   validateHelper.validateRequest(req, res, next, schema, 'body');
@@ -23,14 +26,14 @@ async function createSchema(req, res, next) {
 
 const updateSchema = async (req, res, next) => {
   const schema = Joi.object({
-    name: Joi.string().max(50).optional(),
-    email: Joi.string().email().optional(),
+    name: Joi.string().max(50).required(),
+    email: Joi.string().email().required(),
     contact: Joi.string()
       .pattern(/^\d{10}$/)
-      .optional(),
-    fatherName: Joi.string().max(50).optional(),
-    motherName: Joi.string().max(50).optional(),
-    address: Joi.string().optional(),
+      .required(),
+    fatherName: Joi.string().max(50).required(),
+    motherName: Joi.string().max(50).required(),
+    address: Joi.string().required(),
   });
 
   validateHelper.validateRequest(req, res, next, schema, 'body');

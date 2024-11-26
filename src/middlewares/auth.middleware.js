@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const { decryptJwt } = require('../helpers/jwt.helper');
 const process = require('process');
 
 // checks user authorisation
@@ -10,7 +11,9 @@ function checkAuthToken(req, res, next) {
     return res.status(401).json({ message: 'Access denied. Token is missing.' });
   }
 
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+  const decryptedToken = decryptJwt(token);
+
+  jwt.verify(decryptedToken, process.env.JWT_SECRET, (err, user) => {
     if (err) return res.status(403).json({ message: 'Invalid or expired token.' });
     req.user = user;
     next();
@@ -22,11 +25,15 @@ function authorizeRole(code) {
   return (req, res, next) => {
     const roleArray = Array.isArray(code) ? code : [code];
 
-    if (!roleArray.includes(req.user.role)) {
+    const userRoles = req.user.roles;
+    const hasAccess = userRoles.some(role => roleArray.includes(role));
+
+    if (!hasAccess) {
       return res.status(403).json({
-        error: 'Forbidden: You are not authorized to access this resource',
+        message: 'Forbidden: You are not authorized to access this resource',
       });
     }
+
     next();
   };
 }

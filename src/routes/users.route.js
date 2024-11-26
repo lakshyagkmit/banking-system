@@ -16,7 +16,6 @@ router.post(
   multerMiddleware.upload.single('govIssueIdImage'),
   userValidator.createSchema,
   userController.create,
-  userSerializer.serialize,
   commonHelper.sendResponse
 );
 
@@ -31,8 +30,17 @@ router.get(
 );
 
 router.get(
+  '/me',
+  authMiddleware.checkAuthToken,
+  userController.viewMe,
+  userSerializer.serialize,
+  commonHelper.sendResponse
+);
+
+router.get(
   '/:id',
   authMiddleware.checkAuthToken,
+  authMiddleware.authorizeRole([ROLES['101'], ROLES['102']]),
   commonValidator.idSchema,
   userController.view,
   userSerializer.serialize,
@@ -51,11 +59,20 @@ router.put(
 );
 
 router.delete(
-  '/:id',
+  '/branch-managers/:id',
+  authMiddleware.checkAuthToken,
+  authMiddleware.authorizeRole(ROLES['101']),
+  commonValidator.idSchema,
+  userController.removeManager,
+  commonHelper.sendResponse
+);
+
+router.delete(
+  '/customers/:id',
   authMiddleware.checkAuthToken,
   authMiddleware.authorizeRole([ROLES['101'], ROLES['102']]),
   commonValidator.idSchema,
-  userController.remove,
+  userController.removeCustomer,
   commonHelper.sendResponse
 );
 

@@ -12,8 +12,8 @@ const serialize = (req, res, next) => {
     data.name = user.name;
     data.email = user.email;
     data.contact = user.contact;
-    data.govIssueIdType = user.gov_issue_id_type;
-    data.govIssueIdImage = user.gov_issue_id_image;
+    if (user.gov_issue_id_type) data.govIssueIdType = user.gov_issue_id_type;
+    if (user.gov_issue_id_image) data.govIssueIdImage = user.gov_issue_id_image;
     data.fatherName = user.father_name;
     data.motherName = user.mother_name;
     data.address = user.address;
