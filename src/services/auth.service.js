@@ -1,4 +1,4 @@
-const { User, Role, UserRole, sequelize } = require('../models');
+const { User, Role, sequelize } = require('../models');
 const { Op } = require('sequelize');
 const bcrypt = require('bcryptjs');
 const notificationHelper = require('../helpers/notifications.helper');
@@ -12,19 +12,42 @@ const { ROLES } = require('../constants/constants');
  * Registers a new user, assigns the 'Customer' role, uploads the govIssueId image,
  * and sends an OTP to the user's email for verification.
  */
-async function register(payload, file) {
+async function register(payload) {
+  const { data, file } = payload;
+  const { name, email, password, contact, govIssueIdType, fatherName, motherName, address } = data;
+
   const transaction = await sequelize.transaction();
 
   try {
-    const { name, email, password, contact, govIssueIdType, fatherName, motherName, address } = payload;
-
     const existingUser = await User.findOne({
-      where: { [Op.or]: [{ email }, { contact }] },
+      where: {
+        [Op.or]: [{ email }, { contact }],
+      },
+      include: {
+        model: Role,
+        attributes: ['id', 'code'],
+        through: { attributes: [] },
+      },
     });
 
     if (existingUser) {
-      const field = existingUser.email === email ? 'email' : 'contact';
-      return commonHelper.customError(`User with ${field} exists, please use another ${field}`, 409);
+      const hasRole = existingUser.Roles.some(userRole => userRole.code === ROLES['103']);
+
+      if (hasRole) {
+        return commonHelper.customError(
+          `User with ${existingUser.email === email ? 'email' : 'contact'} already exists with the role ${ROLES['103']}`,
+          409
+        );
+      }
+
+      const usersRole = await Role.findOne({
+        where: { code: ROLES['103'] },
+      });
+
+      await existingUser.addRole(usersRole, { transaction });
+
+      await transaction.commit();
+      return existingUser;
     }
 
     if (!file) {
@@ -53,13 +76,7 @@ async function register(payload, file) {
       where: { code: ROLES['103'] },
     });
 
-    await UserRole.create(
-      {
-        user_id: newUser.id,
-        role_id: usersRole.id,
-      },
-      { transaction }
-    );
+    await newUser.addRole(usersRole, { transaction });
 
     await transaction.commit();
     notificationHelper.sendOtp(email);
@@ -75,7 +92,10 @@ async function register(payload, file) {
  * Verifies the user's email using an OTP. Updates the user's email verification
  * status upon successful OTP validation.
  */
-async function verifyEmail(email, otp) {
+async function verifyEmail(payload) {
+  const { data } = payload;
+  const { email, otp } = data;
+
   if (!(await otpHelper.verifyOtp(email, otp))) {
     commonHelper.customError('Invalid OTP', 400);
   }
@@ -96,7 +116,10 @@ async function verifyEmail(email, otp) {
  * Logs in a user by sending an OTP for verification. Checks that the user's
  * email is verified before allowing login.
  */
-async function login(email) {
+async function login(payload) {
+  const { data } = payload;
+  const { email } = data;
+
   const user = await User.findOne({ where: { email, is_verified: true } });
   if (!user) {
     commonHelper.customError(`User with email ${email} does not exist`, 404);
@@ -111,9 +134,12 @@ async function login(email) {
  * Verifies the user's OTP for login. Generates a JWT token on successful OTP verification
  * and includes the user's role in the token payload.
  */
-async function verifyOtp(email, otp) {
+async function verifyOtp(payload) {
+  const { data } = payload;
+  const { email, otp } = data;
+
   if (!(await otpHelper.verifyOtp(email, otp))) {
-    commonHelper.customError('Invalid OTP', 400);
+    throw commonHelper.customError('Invalid OTP', 400);
   }
 
   const user = await User.findOne({
@@ -124,16 +150,33 @@ async function verifyOtp(email, otp) {
     },
   });
 
+  if (!user) {
+    throw commonHelper.customError('User not found', 404);
+  }
+
   otpHelper.deleteOtp(email);
+
+  const roles = user.Roles.map(role => role.code);
 
   return await jwtHelper.generateToken({
     id: user.id,
-    role: user.Roles[0].code,
+    roles,
   });
 }
 
 //Resends the OTP to the user's email for verification.
-async function resendOtp(email) {
+async function resendOtp(payload) {
+  const { data } = payload;
+  const { email } = data;
+
+  const user = await User.findOne({
+    where: { email },
+  });
+
+  if (!user) {
+    return commonHelper.customError('User not found', 404);
+  }
+
   notificationHelper.sendOtp(email);
   return;
 }
