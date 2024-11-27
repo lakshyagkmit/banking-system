@@ -1,5 +1,6 @@
 const { User, Transaction, UserAccount, Branch, sequelize } = require('../models');
 const commonHelper = require('../helpers/commonFunctions.helper');
+const userHelper = require('../helpers/users.helper');
 const notificationHelper = require('../helpers/notifications.helper');
 const {
   ACCOUNT_TYPES,
@@ -11,14 +12,15 @@ const {
 
 // This function processes account transactions including withdrawal, deposit, and
 // transfer by validating account status, balance, and transaction details, ensuring data consistency via transactions.
-async function create(accountId, payload, user) {
+async function create(payload) {
+  const { accountId, data, user } = payload;
+  const { type, amount, fee, paymentMethod, accountNo } = data;
+  const customerId = user.id;
+
   const transaction = await sequelize.transaction();
   let debitTransaction, creditTransaction;
 
   try {
-    const { type, amount, fee, paymentMethod, accountNo } = payload;
-    const customerId = user.id;
-
     const customer = await User.findByPk(customerId);
     const account = await UserAccount.findByPk(accountId);
 
@@ -202,9 +204,11 @@ async function create(accountId, payload, user) {
 }
 
 // list transactions
-async function index(accountId, query, user) {
+async function index(payload) {
+  const { accountId, query, user } = payload;
   const { page, limit } = query;
-  const { id, role } = user;
+  const { id, roles } = user;
+  const role = userHelper.getHighestRole(roles);
 
   const offset = (page - 1) * limit;
 
@@ -262,8 +266,11 @@ async function index(accountId, query, user) {
 }
 
 // list transactions by id
-async function view(accountId, transactionId, user) {
-  const { id, role } = user;
+async function view(payload) {
+  const { params, user } = payload;
+  const { accountId, transactionId } = params;
+  const { id, roles } = user;
+  const role = userHelper.getHighestRole(roles);
 
   const account = await UserAccount.findByPk(accountId);
 

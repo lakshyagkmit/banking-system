@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   title: Banking System
   description: >-
-    **Banking System APIs** 
+    **Banking System APIs**
   version: 1.0.0
 servers:
   - url: http://localhost:3000/api
@@ -56,7 +56,7 @@ paths:
             schema:
               type: object
               example:
-                email: lakshya26@gmail.com
+                email: lakshyakumarsingh2621@gmail.com
       security:
         - noauthAuth: []
       responses:
@@ -75,8 +75,8 @@ paths:
             schema:
               type: object
               example:
-                email: 'asdfg@gmail.com'
-                otp: '454053'
+                email: '{{EMAIL}}'
+                otp: '988907'
       security:
         - noauthAuth: []
       responses:
@@ -107,16 +107,16 @@ paths:
               properties:
                 name:
                   type: string
-                  example: Abha
+                  example: Lakshya Kr. Singh
                 email:
                   type: string
-                  example: lakshya10@gmail.com
+                  example: lakshyasingh23@gmail.com
                 password:
                   type: integer
                   example: '876543653'
                 contact:
                   type: integer
-                  example: '7890122232'
+                  example: '1234567890'
                 govIssueIdType:
                   type: string
                   example: adhar
@@ -125,13 +125,13 @@ paths:
                   format: binary
                 fatherName:
                   type: string
-                  example: Abhay
+                  example: Randhir Kr. Singh
                 motherName:
                   type: string
-                  example: Rani
+                  example: Ragini Singh
                 address:
                   type: string
-                  example: Rajasthan, India
+                  example: Kolkata, India
       security:
         - noauthAuth: []
       responses:
@@ -150,8 +150,8 @@ paths:
             schema:
               type: object
               example:
-                email: 'asdfgh@gmail.com'
-                otp: ''
+                email: lakshyasingh23@gmail.com
+                otp: '992615'
       security:
         - noauthAuth: []
       responses:
@@ -170,7 +170,7 @@ paths:
             schema:
               type: object
               example:
-                email: lakshyasingh24@gmail.com
+                email: lakshyasingh23@gmail.com
       security:
         - noauthAuth: []
       responses:
@@ -191,16 +191,16 @@ paths:
               properties:
                 name:
                   type: string
-                  example: Vinay
+                  example: Jyoti
                 email:
                   type: string
-                  example: lakshya116@gmail.com
+                  example: lakshyarajput65@gmail.com
                 password:
                   type: integer
                   example: '12345675'
                 contact:
                   type: integer
-                  example: '1234567111'
+                  example: '1214121121'
                 govIssueIdType:
                   type: string
                   example: adhar
@@ -219,6 +219,9 @@ paths:
                 isVerified:
                   type: boolean
                   example: 'true'
+                roleCode:
+                  type: integer
+                  example: '102'
       responses:
         '200':
           description: Successful response
@@ -233,7 +236,7 @@ paths:
           in: query
           schema:
             type: integer
-          example: '2'
+          example: '1'
         - name: limit
           in: query
           schema:
@@ -260,7 +263,7 @@ paths:
           schema:
             type: string
           required: true
-          example: bab3a2ab-7fdb-45de-963e-93fed16a2ed7
+          example: e66524db-81e6-4dd8-b78a-aa17932f3f5f
       responses:
         '200':
           description: Successful response
@@ -276,9 +279,9 @@ paths:
             schema:
               type: object
               example:
-                name: Vina
-                email: lakshya206@gmail.com
-                contact: '1234561111'
+                name: Aloy
+                email: lakshyarajput26@gmail.com
+                contact: '1211511121'
                 fatherName: Rama
                 motherName: Maya
                 address: Kolkata India
@@ -288,7 +291,7 @@ paths:
           schema:
             type: string
           required: true
-          example: 61f3de98-16f1-45a3-a95a-09672d9404d8
+          example: 690283c0-6486-427a-8638-23123d64b878
       responses:
         '200':
           description: Successful response
@@ -304,7 +307,43 @@ paths:
           schema:
             type: string
           required: true
-          example: 61f3de98-16f1-45a3-a95a-09672d9404d8
+          example: 086e7b0a-bc58-4b5c-984f-ae37396b0615
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+  /users/me:
+    get:
+      tags:
+        - Users
+      summary: view me
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+  /users/{id}/roles:
+    patch:
+      tags:
+        - Users
+      summary: assign new role to exisiting user
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              example:
+                rolesToAdd:
+                  - '102'
+                  - '103'
+      parameters:
+        - name: id
+          in: path
+          schema:
+            type: string
+          required: true
+          example: ef804641-1dbf-49cd-ba64-2e43329cc363
       responses:
         '200':
           description: Successful response
@@ -321,10 +360,10 @@ paths:
             schema:
               type: object
               example:
-                userId: 56bc2f56-1180-41e3-93a0-780b6e866201
-                address: Uttrakhand India
-                ifscCode: k01342457
-                contact: 1800 400 202
+                branchManagerId: e66524db-81e6-4dd8-b78a-aa17932f3f5f
+                address: Orissa India
+                ifscCode: k01342450
+                contact: 1800 401 202
                 totalLockers: 10
       responses:
         '200':
@@ -340,7 +379,7 @@ paths:
           in: query
           schema:
             type: integer
-          example: '2'
+          example: '1'
         - name: limit
           in: query
           schema:
@@ -362,13 +401,13 @@ paths:
           schema:
             type: string
           required: true
-          example: 94267363-1ed6-4665-94e6-3302f8834e24
+          example: 78fcb217-5075-44d7-85d0-da57b3cbab14
       responses:
         '200':
           description: Successful response
           content:
             application/json: {}
-    put:
+    patch:
       tags:
         - Branches
       summary: update branch
@@ -378,15 +417,16 @@ paths:
             schema:
               type: object
               example:
-                address: Delhi India
+                address: Kolkata, India
                 totalLockers: 14
+                ifscCode: k76542345
       parameters:
         - name: id
           in: path
           schema:
             type: string
           required: true
-          example: 94267363-1ed6-4665-94e6-3302f8834e24
+          example: 78fcb217-5075-44d7-85d0-da57b3cbab14
       responses:
         '200':
           description: Successful response
@@ -405,8 +445,8 @@ paths:
               example:
                 accountType: savings
                 initialAmount: 1000
-                interestRate: 10
-                minimumAmount: 1000
+                interestRate: 5
+                minimumAmount: 0
       responses:
         '200':
           description: Successful response
@@ -421,7 +461,7 @@ paths:
           in: query
           schema:
             type: integer
-          example: '2'
+          example: '1'
         - name: limit
           in: query
           schema:
@@ -594,12 +634,17 @@ paths:
           in: query
           schema:
             type: integer
-          example: '2'
+          example: '1'
         - name: limit
           in: query
           schema:
             type: integer
           example: '10'
+        - name: ifscCode
+          in: query
+          schema:
+            type: string
+          example: k01342456
       responses:
         '200':
           description: Successful response
@@ -673,8 +718,8 @@ paths:
               type: object
               example:
                 branchIfscCode: k01342456
-                type: current
-                nomineeName: Raja
+                type: savings
+                nomineeName: Ram
       responses:
         '200':
           description: Successful response
@@ -707,7 +752,7 @@ paths:
           in: query
           schema:
             type: integer
-          example: '2'
+          example: '1'
         - name: limit
           in: query
           schema:
@@ -717,7 +762,7 @@ paths:
           in: query
           schema:
             type: string
-          example: accounts
+          example: lockers
       responses:
         '200':
           description: Successful response
@@ -734,7 +779,7 @@ paths:
           schema:
             type: string
           required: true
-          example: b2674fda-272c-4688-93ef-63443eba70c7
+          example: d499a52f-8916-41c6-964c-865cbfe23ea7
       responses:
         '200':
           description: Successful response
@@ -753,6 +798,14 @@ paths:
               example:
                 email: lakshyarajput25@gmail.com
                 lockerSerialNo: '6'
+      security:
+        - noauthAuth: []
+      parameters:
+        - name: Authorization
+          in: header
+          schema:
+            type: string
+          example: k01342456
       responses:
         '200':
           description: Successful response
@@ -771,6 +824,7 @@ paths:
               example:
                 numberOfLockers: 10
                 monthlyCharge: 1500
+                branchIfscCode: k01342450
       responses:
         '200':
           description: Successful response
@@ -785,7 +839,7 @@ paths:
           in: query
           schema:
             type: integer
-          example: '2'
+          example: '1'
         - name: limit
           in: query
           schema:
@@ -807,7 +861,7 @@ paths:
           schema:
             type: string
           required: true
-          example: dc77c525-d4dc-4346-91b6-8142fd54004c
+          example: 5f183a4a-24e1-4c7a-b6ae-f44fdc665fdc
       responses:
         '200':
           description: Successful response
@@ -865,7 +919,8 @@ paths:
               example:
                 type: fixed
                 nominee: Rama
-                principleAmount: 100000
+                principleAmount: 200000
+      parameters:
       responses:
         '200':
           description: Successful response
