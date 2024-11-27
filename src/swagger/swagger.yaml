@@ -798,8 +798,6 @@ paths:
               example:
                 email: lakshyarajput25@gmail.com
                 lockerSerialNo: '6'
-      security:
-        - noauthAuth: []
       parameters:
         - name: Authorization
           in: header
@@ -920,7 +918,6 @@ paths:
                 type: fixed
                 nominee: Rama
                 principleAmount: 200000
-      parameters:
       responses:
         '200':
           description: Successful response

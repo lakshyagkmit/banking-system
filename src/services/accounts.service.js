@@ -3,7 +3,7 @@ const commonHelper = require('../helpers/commonFunctions.helper');
 const userHelper = require('../helpers/users.helper');
 const accountHelper = require('../helpers/accounts.helper');
 const notificationHelper = require('../helpers/notifications.helper');
-const { ROLES, ACCOUNT_TYPES } = require('../constants/constants');
+const { ROLES } = require('../constants/constants');
 
 // Create a  new account for customer based on his application
 async function create(payload) {
@@ -21,12 +21,7 @@ async function create(payload) {
       },
     });
 
-    if (
-      !customer ||
-      !customer.Roles ||
-      customer.Roles.length === 0 ||
-      customer.Roles[0].code !== ROLES['103']
-    ) {
+    if (!customer || !customer.Roles) {
       return commonHelper.customError('No user Found', 404);
     }
 
@@ -42,7 +37,7 @@ async function create(payload) {
       where: {
         user_id: customer.id,
         branch_ifsc_code: branch.ifsc_code,
-        type: ACCOUNT_TYPES.SAVINGS || ACCOUNT_TYPES.CURRENT,
+        type: type,
       },
     });
 

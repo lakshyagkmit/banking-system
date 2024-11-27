@@ -15,13 +15,17 @@ async function assign(payload) {
   try {
     const customer = await User.findOne({
       where: { email },
-      include: {
-        model: Role,
-        attributes: ['code'],
-      },
+      include: [
+        {
+          model: Role,
+          attributes: ['code'],
+        },
+      ],
     });
 
-    if (!customer || customer.Roles[0].code !== ROLES['103']) {
+    const customerRoles = customer?.Roles?.map(role => role.code);
+
+    if (!customerRoles.includes(ROLES['103'])) {
       return commonHelper.customError('No user found', 404);
     }
 
@@ -204,7 +208,7 @@ async function view(payload) {
     include = { model: User, where: { id: user.id } };
   }
 
-  const locker = await Locker.findAndCountAll({
+  const locker = await Locker.findOne({
     where: whereCondition,
     include,
   });

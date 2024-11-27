@@ -1,6 +1,5 @@
 const { User, Transaction, UserAccount, Branch, sequelize } = require('../models');
 const commonHelper = require('../helpers/commonFunctions.helper');
-const userHelper = require('../helpers/users.helper');
 const notificationHelper = require('../helpers/notifications.helper');
 const {
   ACCOUNT_TYPES,
@@ -208,16 +207,20 @@ async function index(payload) {
   const { accountId, query, user } = payload;
   const { page, limit } = query;
   const { id, roles } = user;
-  const role = userHelper.getHighestRole(roles);
+  const role = roles.includes(ROLES['102']) ? ROLES['102'] : ROLES['103'];
 
   const offset = (page - 1) * limit;
 
   let transactions;
   if (role === ROLES['102']) {
-    const account = UserAccount.findByPk(accountId);
+    const account = await UserAccount.findByPk(accountId);
+
+    if (!account) {
+      return commonHelper.customError("No account found", 404);
+    }
 
     const branch = await Branch.findOne({
-      where: { user_id: id },
+      where: { branch_manager_id: id },
     });
 
     if (branch.id !== account.branch_id) {
@@ -253,7 +256,7 @@ async function index(payload) {
     });
   }
 
-  if (!transactions.rows.length) {
+  if (!transactions) {
     return commonHelper.customError('No transactions found', 404);
   }
 
@@ -270,7 +273,7 @@ async function view(payload) {
   const { params, user } = payload;
   const { accountId, transactionId } = params;
   const { id, roles } = user;
-  const role = userHelper.getHighestRole(roles);
+  const role = roles.includes(ROLES['102']) ? ROLES['102'] : ROLES['103'];
 
   const account = await UserAccount.findByPk(accountId);
 
@@ -281,7 +284,7 @@ async function view(payload) {
   let transaction;
   if (role === ROLES['102']) {
     const branch = await Branch.findOne({
-      where: { user_id: id },
+      where: { branch_manager_id: id },
     });
 
     if (branch.id !== account.branch_id) {
