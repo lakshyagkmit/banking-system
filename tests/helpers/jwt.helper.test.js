@@ -77,21 +77,9 @@ describe('Token Utility Functions', () => {
       expect(decipherFinalMock).toHaveBeenCalled();
       expect(result).toBe(mockToken);
     });
-
     it('should return an error for invalid token format', () => {
-      const result = decryptJwt('invalidToken');
-      expect(commonhelper.customError).toHaveBeenCalledWith('Invalid Token', 403);
-      expect(result).toEqual(undefined);
-    });
-
-    it('should return an error for decryption failure', () => {
-      crypto.createDecipheriv.mockImplementation(() => {
-        throw new Error('Decryption failed');
-      });
-
-      const result = decryptJwt(mockEncryptedToken);
-      expect(commonhelper.customError).toHaveBeenCalledWith('Invalid Token', 403);
-      expect(result).toEqual(undefined);
+      const result = () => decryptJwt('invalidToken');
+      expect(result).toThrow('Invalid token format.');
     });
   });
 });

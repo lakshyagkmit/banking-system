@@ -159,4 +159,26 @@ describe('Email Helper Functions', () => {
       });
     });
   });
+
+  describe('failedTransactionNotification', () => {
+    it('should send a failed transaction notification email', async () => {
+      const email = faker.internet.email(); // Generate a fake email
+      const transactionType = constants.TRANSACTION_TYPES.WITHDRAWAL; // Example transaction type
+      const amount = 1000; // Example amount
+
+      await emailHelper.failedTransactionNotification(email, transactionType, amount);
+
+      expect(transporter.sendMail).toHaveBeenCalledWith({
+        from: process.env.SMPT_MAIL,
+        to: email,
+        subject: `Transaction Failed Alert: ${transactionType}`,
+        html: `
+      <p>Dear User,</p>
+      <p>The transaction of type ${transactionType.toLowerCase()} of <strong>₹${amount}</strong> has been failed.</p>
+      <p>Thank you for banking with us.</p>
+      <p>Federal Bank</p>
+    `,
+      });
+    });
+  });
 });
