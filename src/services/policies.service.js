@@ -1,48 +1,39 @@
-const { Bank, AccountPolicy, UserAccount, sequelize } = require('../models');
+const { Bank, AccountPolicy, UserAccount } = require('../models');
 const commonHelper = require('../helpers/commonFunctions.helper');
 
 // create new policy
 async function create(payload) {
-  const transaction = await sequelize.transaction();
+  const { data } = payload;
+  const { accountType, initialAmount, interestRate, minimumAmount, lockInPeriod, penaltyFee } = data;
 
-  try {
-    const { accountType, initialAmount, interestRate, minimumAmount, lockInPeriod, penaltyFee } = payload;
+  const existingPolicy = await AccountPolicy.findOne({
+    where: {
+      account_type: accountType,
+      interest_rate: interestRate,
+      initial_amount: initialAmount,
+    },
+  });
 
-    const existingPolicy = await AccountPolicy.findOne({
-      where: {
-        account_type: accountType,
-        interest_rate: interestRate,
-        initial_amount: initialAmount,
-      },
-    });
+  if (existingPolicy) return commonHelper.customError('Policy already exists', 409);
 
-    if (existingPolicy) return commonHelper.customError('Policy already exists', 409);
+  const bank = await Bank.findOne();
 
-    const bank = await Bank.findOne();
+  const newPolicy = await AccountPolicy.create({
+    bank_id: bank.id,
+    account_type: accountType,
+    initial_amount: initialAmount,
+    interest_rate: interestRate,
+    minimum_amount: minimumAmount,
+    lock_in_period: lockInPeriod,
+    penalty_fee: penaltyFee,
+  });
 
-    const newPolicy = await AccountPolicy.create(
-      {
-        bank_id: bank.id,
-        account_type: accountType,
-        initial_amount: initialAmount,
-        interest_rate: interestRate,
-        minimum_amount: minimumAmount,
-        lock_in_period: lockInPeriod,
-        penalty_fee: penaltyFee,
-      },
-      { transaction }
-    );
-    await transaction.commit();
-
-    return newPolicy;
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
-  }
+  return newPolicy;
 }
 
 // list all policies
-async function index(query) {
+async function index(payload) {
+  const { query } = payload;
   const { page, limit } = query;
   const offset = (page - 1) * limit;
 
@@ -51,7 +42,7 @@ async function index(query) {
     limit: limit,
   });
 
-  if (!policies.rows.length) {
+  if (!policies) {
     return commonHelper.customError('No policies found', 404);
   }
 
@@ -73,56 +64,41 @@ async function view(id) {
 }
 
 // update a policy by id
-async function update(id, payload) {
-  const transaction = await sequelize.transaction();
-  try {
-    const { interestRate, penaltyFee } = payload;
-    const policy = await AccountPolicy.findByPk(id);
-    if (!policy) {
-      return commonHelper.customError('Policy not found', 404);
-    }
+async function update(payload) {
+  const { id, data } = payload;
+  const { interestRate, penaltyFee } = data;
 
-    const updatedPolicy = await policy.update(
-      {
-        interest_rate: interestRate,
-        penalty_fee: penaltyFee,
-      },
-      { transaction }
-    );
-    await transaction.commit();
-
-    return updatedPolicy;
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
+  const policy = await AccountPolicy.findByPk(id);
+  if (!policy) {
+    return commonHelper.customError('Policy not found', 404);
   }
+
+  const updatedPolicy = await policy.update({
+    interest_rate: interestRate,
+    penalty_fee: penaltyFee,
+  });
+
+  return updatedPolicy;
 }
 
 // delete policy by id
 async function remove(id) {
-  const transaction = await sequelize.transaction();
-  try {
-    const policy = await AccountPolicy.findByPk(id);
-    if (!policy) {
-      return commonHelper.customError('Policy not found', 404);
-    }
-
-    const account = await UserAccount.findOne({
-      where: { policy_id: policy.id },
-    });
-
-    if (account) {
-      return commonHelper.customError('Account exists with this policy, policy cannot be deleted', 409);
-    }
-
-    await policy.destroy({ transaction });
-    await transaction.commit();
-
-    return { message: 'Policy deleted successfully' };
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
+  const policy = await AccountPolicy.findByPk(id);
+  if (!policy) {
+    return commonHelper.customError('Policy not found', 404);
   }
+
+  const account = await UserAccount.findOne({
+    where: { policy_id: policy.id },
+  });
+
+  if (account) {
+    return commonHelper.customError('Account exists with this policy, policy cannot be deleted', 409);
+  }
+
+  await policy.destroy();
+
+  return { message: 'Policy deleted successfully' };
 }
 
 module.exports = { create, index, view, update, remove };
