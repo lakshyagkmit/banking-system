@@ -46,7 +46,7 @@ async function update(req, res, next) {
     };
     res.data = await branchService.update(payload);
     res.message = 'Branch updated successfully';
-    res.statusCode = 200;
+    res.statusCode = 202;
     next();
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);

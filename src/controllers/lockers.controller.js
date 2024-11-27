@@ -68,7 +68,7 @@ async function update(req, res, next) {
     };
     await lockerService.update(payload);
     res.message = 'Locker updated successfully';
-    res.statusCode = 200;
+    res.statusCode = 202;
     next();
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);

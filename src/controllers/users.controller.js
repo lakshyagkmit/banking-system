@@ -47,8 +47,7 @@ async function view(req, res, next) {
 
 async function viewMe(req, res, next) {
   try {
-    const { user } = req;
-    const { id } = user;
+    const { id } = req.user;
     res.data = await userService.viewMe(id);
     res.statusCode = 200;
     next();
@@ -66,7 +65,7 @@ async function update(req, res, next) {
     };
     res.data = await userService.update(payload);
     res.message = 'User updated successfully';
-    res.statusCode = 200;
+    res.statusCode = 202;
     next();
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
@@ -75,8 +74,7 @@ async function update(req, res, next) {
 
 async function remove(req, res, next) {
   try {
-    const { params } = req;
-    const { id } = params;
+    const { id } = req.params;
     await userService.remove(id);
     res.message = 'User deleted successfully';
     res.statusCode = 204;
@@ -94,7 +92,7 @@ async function updateRoles(req, res, next) {
     };
     res.data = await userService.updateRoles(payload);
     res.message = 'User roles updated successfully';
-    res.statusCode = 200;
+    res.statusCode = 202;
     next();
   } catch (error) {
     commonHelper.customErrorHandler(req, res, error.message, error.statusCode, error);
