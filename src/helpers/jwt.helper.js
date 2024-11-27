@@ -1,7 +1,6 @@
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const process = require('process');
-const commonhelper = require('./commonFunctions.helper');
 
 async function generateToken(payload) {
   const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
@@ -26,20 +25,16 @@ function encryptJwt(token) {
 function decryptJwt(encryptedToken) {
   const ENCRYPTION_KEY = Buffer.from(process.env.ENCRYPTION_KEY, 'base64');
 
-  try {
-    const [iv, encrypted] = encryptedToken.split(':');
-    if (!iv || !encrypted) {
-      throw new Error('Invalid token format.');
-    }
-
-    const decipher = crypto.createDecipheriv('aes-256-cbc', ENCRYPTION_KEY, Buffer.from(iv, 'hex'));
-    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
-    decrypted += decipher.final('utf8');
-
-    return decrypted;
-  } catch (err) {
-    return commonhelper.customError('Invalid Token', 403);
+  const [iv, encrypted] = encryptedToken.split(':');
+  if (!iv || !encrypted) {
+    throw new Error('Invalid token format.');
   }
+
+  const decipher = crypto.createDecipheriv('aes-256-cbc', ENCRYPTION_KEY, Buffer.from(iv, 'hex'));
+  let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+  decrypted += decipher.final('utf8');
+
+  return decrypted;
 }
 
 module.exports = { generateToken, decryptJwt };
