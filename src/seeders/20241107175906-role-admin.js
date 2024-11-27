@@ -10,7 +10,7 @@ module.exports = {
       { returning: ['id'] }
     );
 
-    const [adminUser] = await queryInterface.insert(
+    const [adminUser] = await queryInterface.bulkInsert(
       'users',
       [
         {
@@ -27,7 +27,7 @@ module.exports = {
       { returning: ['id'] }
     );
 
-    await queryInterface.insert(
+    await queryInterface.bulkInsert(
       'users_roles',
       [
         {
