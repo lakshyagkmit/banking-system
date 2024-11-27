@@ -15,13 +15,14 @@ router.post(
   authController.register,
   commonHelper.sendResponse
 );
+
 router.post('/verify-email', authValidator.otpSchema, authController.verifyEmail, commonHelper.sendResponse);
 
 router.post('/otp-login', authValidator.loginSchema, authController.login, commonHelper.sendResponse);
 
 router.post('/otp-verify', authValidator.otpSchema, authController.verifyOtp, commonHelper.sendResponse);
 
-router.post('/otp-resend', authController.resendOtp, commonHelper.sendResponse);
+router.post('/otp-resend', authValidator.loginSchema, authController.resendOtp, commonHelper.sendResponse);
 
 // Protected route
 router.delete('/logout', authMiddleware.checkAuthToken, authController.logout, commonHelper.sendResponse);
