@@ -7,6 +7,7 @@ const otpHelper = require('../../src/helpers/otps.helper');
 const jwtHelper = require('../../src/helpers/jwt.helper');
 const awsHelper = require('../../src/helpers/aws.helper');
 const { ROLES } = require('../../src/constants/constants');
+const redisClient = require('../../src/config/redis');
 
 jest.mock('../../src/models');
 jest.mock('../../src/helpers/notifications.helper');
@@ -17,10 +18,24 @@ jest.mock('../../src/helpers/aws.helper');
 jest.mock('bcryptjs', () => ({
   hash: jest.fn(),
 }));
+jest.mock('redis', () => {
+  const mRedisClient = {
+    connect: jest.fn().mockResolvedValue(),
+    on: jest.fn(),
+    quit: jest.fn().mockResolvedValue(),
+  };
+  return {
+    createClient: jest.fn(() => mRedisClient),
+  };
+});
 
 describe('Auth Service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  afterAll(async () => {
+    await redisClient.quit();
   });
 
   describe('register', () => {

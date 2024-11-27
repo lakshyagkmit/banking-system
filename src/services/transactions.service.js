@@ -216,7 +216,7 @@ async function index(payload) {
     const account = await UserAccount.findByPk(accountId);
 
     if (!account) {
-      return commonHelper.customError("No account found", 404);
+      return commonHelper.customError('No account found', 404);
     }
 
     const branch = await Branch.findOne({

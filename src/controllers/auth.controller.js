@@ -8,7 +8,7 @@ async function register(req, res, next) {
       file: req.file,
     };
     await authService.register(payload);
-    res.message = 'User registered successfully';
+    res.message = 'User registered successfully, move forward to verify email';
     res.statusCode = 201;
     next();
   } catch (error) {
