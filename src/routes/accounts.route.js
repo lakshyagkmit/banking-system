@@ -91,4 +91,12 @@ router.get(
   commonHelper.sendResponse
 );
 
+router.patch(
+  '/:accountId/transactions/:transactionId',
+  authMiddleware.checkAuthToken,
+  authMiddleware.authorizeRole(ROLES['102']),
+  transactionController.update,
+  commonHelper.sendResponse
+);
+
 module.exports = router;
