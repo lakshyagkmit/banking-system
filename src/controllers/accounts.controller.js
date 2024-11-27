@@ -3,8 +3,11 @@ const commonHelper = require('../helpers/commonFunctions.helper');
 
 async function create(req, res, next) {
   try {
-    const { body, user } = req;
-    res.data = await accountService.create(body, user);
+    const payload = {
+      data: req.body,
+      user: req.user,
+    };
+    res.data = await accountService.create(payload);
     res.statusCode = 201;
     next();
   } catch (error) {
@@ -14,8 +17,11 @@ async function create(req, res, next) {
 
 async function index(req, res, next) {
   try {
-    const { query, user } = req;
-    res.data = await accountService.index(query, user);
+    const payload = {
+      query: req.query,
+      user: req.user,
+    };
+    res.data = await accountService.index(payload);
     res.statusCode = 200;
     next();
   } catch (error) {
@@ -25,9 +31,11 @@ async function index(req, res, next) {
 
 async function view(req, res, next) {
   try {
-    const { params, user } = req;
-    const { id } = params;
-    res.data = await accountService.view(id, user);
+    const payload = {
+      id: req.params.id,
+      user: req.user,
+    };
+    res.data = await accountService.view(payload);
     res.statusCode = 200;
     next();
   } catch (error) {
@@ -37,10 +45,13 @@ async function view(req, res, next) {
 
 async function update(req, res, next) {
   try {
-    const { params, body, user } = req;
-    const { id } = params;
+    const payload = {
+      id: req.params.id,
+      data: req.body,
+      user: req.user,
+    };
+    res.data = await accountService.update(payload);
     res.message = 'Account updated successfully';
-    res.data = await accountService.update(id, body, user);
     res.statusCode = 200;
     next();
   } catch (error) {
@@ -50,9 +61,11 @@ async function update(req, res, next) {
 
 async function remove(req, res, next) {
   try {
-    const { params, user } = req;
-    const { id } = params;
-    await accountService.remove(id, user);
+    const payload = {
+      id: req.params.id,
+      user: req.user,
+    };
+    await accountService.remove(payload);
     res.message = 'Account deleted successfully';
     res.statusCode = 204;
     next();

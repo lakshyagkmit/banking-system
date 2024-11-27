@@ -3,9 +3,12 @@ const commonHelper = require('../helpers/commonFunctions.helper');
 
 async function create(req, res, next) {
   try {
-    const { params, body, user } = req;
-    const { accountId } = params;
-    res.data = await transactionService.create(accountId, body, user);
+    const payload = {
+      accountId: req.params.accountId,
+      data: req.body,
+      user: req.user,
+    };
+    res.data = await transactionService.create(payload);
     res.statusCode = 201;
     next();
   } catch (error) {
@@ -15,9 +18,12 @@ async function create(req, res, next) {
 
 async function index(req, res, next) {
   try {
-    const { params, query, user } = req;
-    const { accountId } = params;
-    res.data = await transactionService.index(accountId, query, user);
+    const payload = {
+      accountId: req.params.accountId,
+      query: req.query,
+      user: req.user,
+    };
+    res.data = await transactionService.index(payload);
     res.statusCode = 200;
     next();
   } catch (error) {
@@ -27,9 +33,11 @@ async function index(req, res, next) {
 
 async function view(req, res, next) {
   try {
-    const { params, user } = req;
-    const { accountId, transactionId } = params;
-    res.data = await transactionService.view(accountId, transactionId, user);
+    const payload = {
+      params: req.params,
+      user: req.user,
+    };
+    res.data = await transactionService.view(payload);
     res.statusCode = 200;
     next();
   } catch (error) {

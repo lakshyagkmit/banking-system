@@ -7,6 +7,7 @@ async function querySchema(req, res, next) {
     limit: Joi.number().positive().min(1).max(100).default(10),
     userRole: Joi.string().max(5).optional(),
     requestType: Joi.string().max(10).optional(),
+    ifscCode: Joi.string().max(20).optional(),
   });
   validateHelper.validateRequest(req, res, next, schema, 'query');
 }

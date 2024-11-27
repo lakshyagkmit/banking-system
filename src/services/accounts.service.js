@@ -1,14 +1,16 @@
 const { User, Role, UserAccount, Branch, AccountPolicy, UserApplication, sequelize } = require('../models');
 const commonHelper = require('../helpers/commonFunctions.helper');
+const userHelper = require('../helpers/users.helper');
 const accountHelper = require('../helpers/accounts.helper');
 const notificationHelper = require('../helpers/notifications.helper');
 const { ROLES, ACCOUNT_TYPES } = require('../constants/constants');
 
 // Create a  new account for customer based on his application
-async function create(payload, user) {
+async function create(payload) {
+  const { data, user } = payload;
   const transaction = await sequelize.transaction();
   try {
-    const { userId, type, nominee, branchIfscCode } = payload;
+    const { userId, type, nominee, branchIfscCode } = data;
     const { role } = user;
 
     const customer = await User.findOne({
@@ -52,7 +54,7 @@ async function create(payload, user) {
 
     if (role === ROLES['102']) {
       const branch = await Branch.findOne({
-        where: { user_id: user.id },
+        where: { branch_manager_id: user.id },
       });
 
       if (!branch || branch.id !== branchId) {
@@ -111,37 +113,41 @@ async function create(payload, user) {
   }
 }
 
-// List accounts
-async function index(query, user) {
-  const { page, limit } = query;
-  const { role } = user;
-
+// list accounts based on role (Admin gets all, Branch Manager gets branch-specific, Customer gets their own)
+async function index(payload) {
+  const { query, user } = payload;
+  const { page, limit, ifscCode } = query;
+  const role = userHelper.getHighestRole(user.roles);
   const offset = (page - 1) * limit;
 
-  let accounts;
+  let whereCondition = {};
+  let include = [];
+
   if (role === ROLES['101']) {
-    accounts = await UserAccount.findAndCountAll({
-      offset: offset,
-      limit: limit,
-    });
+    include = [
+      {
+        model: Branch,
+        where: ifscCode ? { ifsc_code: ifscCode } : {},
+        attributes: ['id', 'ifsc_code'],
+      },
+    ];
   } else if (role === ROLES['102']) {
     const branch = await Branch.findOne({
-      where: { user_id: user.id },
+      where: { branch_manager_id: user.id },
     });
-    accounts = await UserAccount.findAndCountAll({
-      where: { branch_id: branch.id },
-      offset: offset,
-      limit: limit,
-    });
-  } else if (user.role === ROLES['103']) {
-    accounts = await UserAccount.findAndCountAll({
-      where: { user_id: user.id },
-      offset: offset,
-      limit: limit,
-    });
+    whereCondition = { branch_id: branch.id };
+  } else {
+    whereCondition = { user_id: user.id };
   }
 
-  if (!accounts.rows.length) {
+  const accounts = await UserAccount.findAndCountAll({
+    where: whereCondition,
+    include,
+    offset: offset,
+    limit: limit,
+  });
+
+  if (!accounts) {
     return commonHelper.customError('No accounts found', 404);
   }
 
@@ -153,55 +159,32 @@ async function index(query, user) {
   };
 }
 
-// Get a account by id
-async function view(id, user) {
+// Get an account by id
+async function view(payload) {
+  const { id, user } = payload;
   const accountId = id;
-  const role = user.role;
+  const role = userHelper.getHighestRole(user.roles);
 
-  let account;
-  if (role === ROLES['103']) {
-    account = await UserAccount.findOne({
-      where: { id: accountId, user_id: user.id },
-      include: {
-        model: User,
-      },
-    });
-  }
+  let whereCondition = {};
+  let include = [{ model: User }];
 
   if (role === ROLES['101']) {
-    account = UserAccount.findOne({
-      where: { id: accountId },
-      include: [
-        {
-          model: User,
-        },
-        {
-          model: Branch,
-        },
-      ],
-    });
-  }
-
-  if (role === ROLES['102']) {
+    whereCondition = { id: accountId };
+    include.push({ model: Branch });
+  } else if (role === ROLES['102']) {
     const branch = await Branch.findOne({
-      where: { user_id: user.id },
+      where: { branch_manager_id: user.id },
     });
-
-    account = await UserAccount.findOne({
-      where: {
-        id: accountId,
-        branch_id: branch.id,
-      },
-      include: [
-        {
-          model: User,
-        },
-        {
-          model: Branch,
-        },
-      ],
-    });
+    whereCondition = { id: accountId, branch_id: branch.id };
+    include.push({ model: Branch });
+  } else {
+    whereCondition = { id: accountId, user_id: user.id };
   }
+
+  const account = await UserAccount.findOne({
+    where: whereCondition,
+    include,
+  });
 
   if (!account) {
     return commonHelper.customError('Account not found', 404);
@@ -211,67 +194,58 @@ async function view(id, user) {
 }
 
 // Update account details by id
-async function update(id, payload, user) {
-  const transaction = await sequelize.transaction();
+async function update(payload) {
+  const { id, data, user } = payload;
+  const accountId = id;
+  const role = userHelper.getHighestRole(user.roles);
 
-  try {
-    const accountId = id;
+  const account = await UserAccount.findOne({
+    where: { id: accountId },
+  });
 
-    const account = await UserAccount.findOne({
-      where: { id: accountId },
-    });
+  if (!account) {
+    return commonHelper.customError('Account not found', 404);
+  }
 
-    if (!account) {
-      return commonHelper.customError('Account not found', 404);
-    }
-
+  if (role === ROLES['102']) {
     const branch = await Branch.findOne({
-      where: { user_id: user.id },
+      where: { branch_manager_id: user.id },
     });
-
     if (account.branch_id !== branch.id) {
       return commonHelper.customError('You can only update accounts of customers in your branch', 403);
     }
-
-    const updatedAccount = await account.update(payload, { transaction });
-    await transaction.commit();
-
-    return updatedAccount;
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
   }
+
+  const updatedAccount = await account.update(data);
+
+  return updatedAccount;
 }
 
-// soft delete account by id
-async function remove(id, user) {
-  const transaction = await sequelize.transaction();
+// Soft delete account by id
+async function remove(payload) {
+  const { id, user } = payload;
+  const role = userHelper.getHighestRole(user.roles);
 
-  try {
-    const account = await UserAccount.findOne({
-      where: { id },
-    });
+  const account = await UserAccount.findOne({
+    where: { id },
+  });
 
-    if (!account) {
-      return commonHelper.customError('Account not found', 404);
-    }
+  if (!account) {
+    return commonHelper.customError('Account not found', 404);
+  }
 
+  if (role === ROLES['102']) {
     const branch = await Branch.findOne({
-      where: { user_id: user.id },
+      where: { branch_manager_id: user.id },
     });
-
     if (account.branch_id !== branch.id) {
       return commonHelper.customError('You can only delete accounts of customers in your branch', 403);
     }
-
-    await account.destroy({ transaction });
-    await transaction.commit();
-
-    return { message: 'Account Deleted Successfully' };
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
   }
+
+  await account.destroy();
+
+  return;
 }
 
 module.exports = { create, index, view, update, remove };

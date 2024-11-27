@@ -45,7 +45,7 @@ router.get(
 router.patch(
   '/:id',
   authMiddleware.checkAuthToken,
-  authMiddleware.authorizeRole(ROLES['102']),
+  authMiddleware.authorizeRole([ROLES['101'], ROLES['102']]),
   commonValidator.idSchema,
   accountValidator.updateSchema,
   accountController.update,
@@ -56,7 +56,7 @@ router.patch(
 router.delete(
   '/:id',
   authMiddleware.checkAuthToken,
-  authMiddleware.authorizeRole(ROLES['102']),
+  authMiddleware.authorizeRole([ROLES['101'], ROLES['102']]),
   commonValidator.idSchema,
   accountController.remove,
   commonHelper.sendResponse
