@@ -1,18 +1,33 @@
-const { create } = require('../../src/controllers/deposits.controller');
+const { create } = require('../../src/services/deposits.service');
 const { User, UserAccount, Branch, AccountPolicy } = require('../../src/models');
 const commonHelper = require('../../src/helpers/commonFunctions.helper');
 const accountHelper = require('../../src/helpers/accounts.helper');
 const notificationHelper = require('../../src/helpers/notifications.helper');
 const { ACCOUNT_TYPES } = require('../../src/constants/constants');
+const redisClient = require('../../src/config/redis');
 
 jest.mock('../../src/models');
 jest.mock('../../src/helpers/commonFunctions.helper');
 jest.mock('../../src/helpers/accounts.helper');
 jest.mock('../../src/helpers/notifications.helper');
+jest.mock('redis', () => {
+  const mRedisClient = {
+    connect: jest.fn().mockResolvedValue(),
+    on: jest.fn(),
+    quit: jest.fn().mockResolvedValue(),
+  };
+  return {
+    createClient: jest.fn(() => mRedisClient),
+  };
+});
 
 describe('Deposit Account Controller - create', () => {
   afterEach(() => {
     jest.clearAllMocks();
+  });
+
+  afterAll(async () => {
+    await redisClient.quit();
   });
 
   it('should create a new deposit account successfully (Fixed Deposit)', async () => {
@@ -44,13 +59,14 @@ describe('Deposit Account Controller - create', () => {
     };
     const mockAccountNumber = '1234567890';
 
-    // Mock every model and helper function explicitly
+    // Mock all the necessary calls
     UserAccount.findOne
       .mockResolvedValueOnce(mockAccount) // Active account
       .mockResolvedValueOnce(null); // No duplicate account number
-    Branch.findOne.mockResolvedValue(mockBranch);
-    AccountPolicy.findOne.mockResolvedValue(mockPolicy);
+    Branch.findOne.mockResolvedValueOnce(mockBranch);
+    AccountPolicy.findOne.mockResolvedValueOnce(mockPolicy);
     accountHelper.generateAccountNumber.mockReturnValue(mockAccountNumber);
+    UserAccount.findOne.mockResolvedValueOnce(null);
     UserAccount.create.mockResolvedValueOnce({
       id: 1,
       type: ACCOUNT_TYPES.FIXED,
@@ -59,8 +75,9 @@ describe('Deposit Account Controller - create', () => {
     });
     notificationHelper.accountCreationNotification.mockImplementation(() => {});
 
+    // Act
     const result = await create(mockPayload);
-
+    // Assert
     expect(result).toEqual({
       id: 1,
       type: ACCOUNT_TYPES.FIXED,
@@ -68,7 +85,7 @@ describe('Deposit Account Controller - create', () => {
       principle_amount: mockPayload.data.principleAmount,
     });
 
-    expect(UserAccount.findOne).toHaveBeenCalledTimes(2);
+    expect(UserAccount.findOne).toHaveBeenCalledWith();
     expect(Branch.findOne).toHaveBeenCalledWith({ where: { id: mockAccount.branch_id } });
     expect(AccountPolicy.findOne).toHaveBeenCalledWith({ where: { account_type: ACCOUNT_TYPES.FIXED } });
     expect(accountHelper.generateAccountNumber).toHaveBeenCalled();

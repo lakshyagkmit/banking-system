@@ -49,7 +49,7 @@ describe('Auth Controller', () => {
 
       await authController.register(req, res, next);
 
-      expect(res.message).toBe('User registered successfully');
+      expect(res.message).toBe('User registered successfully, move forward to verify email');
       expect(res.statusCode).toBe(201);
       expect(authService.register).toHaveBeenCalledWith({
         data: req.body,

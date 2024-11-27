@@ -2,15 +2,30 @@ const { requestAccount, requestLocker, index, view } = require('../../src/servic
 const { User, UserAccount, Branch, UserApplication, UserLocker } = require('../../src/models');
 const notificationHelper = require('../../src/helpers/notifications.helper');
 const commonHelper = require('../../src/helpers/commonFunctions.helper');
-const { STATUS, APPLICATION_TYPES } = require('../../src/constants/constants');
+const { STATUS } = require('../../src/constants/constants');
+const redisClient = require('../../src/config/redis');
 
 jest.mock('../../src/models');
 jest.mock('../../src/helpers/notifications.helper');
 jest.mock('../../src/helpers/commonFunctions.helper');
+jest.mock('redis', () => {
+  const mRedisClient = {
+    connect: jest.fn().mockResolvedValue(),
+    on: jest.fn(),
+    quit: jest.fn().mockResolvedValue(),
+  };
+  return {
+    createClient: jest.fn(() => mRedisClient),
+  };
+});
 
 describe('Application Service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  afterAll(async () => {
+    await redisClient.quit();
   });
 
   describe('requestAccount', () => {

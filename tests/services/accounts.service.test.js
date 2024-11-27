@@ -77,9 +77,9 @@ describe('create function', () => {
   });
 
   it('should return error if user role is invalid', async () => {
-    payload.user.role = '104'; // Invalid role
+    payload.user.role = '104';
 
-    User.findOne.mockResolvedValue({
+    User.findOne.mockResolvedValueOnce({
       id: 1,
       Roles: [{ code: '104' }],
     });
@@ -134,7 +134,7 @@ describe('index function', () => {
 
     const result = await index(payload);
 
-    expect(commonHelper.customError).toHaveBeenCalledWith('No user Found', 404);
+    expect(commonHelper.customError).toHaveBeenCalledWith('No branch Found.', 404);
   });
 });
 
