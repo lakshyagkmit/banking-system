@@ -1,16 +1,18 @@
 const { UserApplication, Branch, Locker, User, Role, UserLocker, sequelize } = require('../models');
 const commonHelper = require('../helpers/commonFunctions.helper');
+const userHelper = require('../helpers/users.helper');
 const notificationHelper = require('../helpers/notifications.helper');
 const { ROLES, APPLICATION_TYPES, LOCKER_STATUS, STATUS } = require('../constants/constants');
 
 // assign a locker to customer based on availability
-async function assign(payload, user) {
+async function assign(payload) {
+  const { data, user } = payload;
+  const { email, lockerSerialNo } = data;
+  const { id } = user;
+
   const transaction = await sequelize.transaction();
 
   try {
-    const { email, lockerSerialNo } = payload;
-    const { id } = user;
-
     const customer = await User.findOne({
       where: { email },
       include: {
@@ -25,11 +27,11 @@ async function assign(payload, user) {
 
     const branch = await Branch.findOne({
       where: {
-        user_id: id,
+        branch_manager_id: id,
       },
     });
 
-    if (!branch.total_lockers) {
+    if (!branch || !branch.total_lockers) {
       return commonHelper.customError('Locker not available', 400);
     }
 
@@ -81,7 +83,7 @@ async function assign(payload, user) {
     await transaction.commit();
     notificationHelper.lockerAssignedNotification(email, lockerSerialNo);
 
-    return { message: 'Locker assigned successfully' };
+    return;
   } catch (error) {
     await transaction.rollback();
     throw error;
@@ -89,19 +91,30 @@ async function assign(payload, user) {
 }
 
 // create bulk lockers in branch based on the total no. of lockers in the branch
-async function create(payload, user) {
-  const { numberOfLockers, monthlyCharge } = payload;
-  const { id } = user;
+async function create(payload) {
+  const { data, user } = payload;
+  const { numberOfLockers, monthlyCharge, branchIfscCode } = data;
+  const { id, roles } = user;
+  const userRole = userHelper.getHighestRole(roles);
+
+  let whereCondition = {};
+  if (userRole === ROLES['101']) {
+    if (!branchIfscCode)
+      return commonHelper.customError('please provide branch ifsc code to move forward', 400);
+    whereCondition = { ifsc_code: branchIfscCode };
+  } else {
+    whereCondition = { branch_manager_id: id };
+  }
 
   const branch = await Branch.findOne({
-    where: { user_id: id },
+    where: whereCondition,
   });
+
+  if (!branch) return commonHelper.customError('Branch not found', 404);
 
   const lockerCount = await Locker.count({
     where: { branch_id: branch.id },
   });
-
-  console.log(lockerCount);
 
   if (lockerCount + numberOfLockers > branch.total_lockers) {
     return commonHelper.customError(
@@ -121,40 +134,44 @@ async function create(payload, user) {
   }
 
   await Locker.bulkCreate(lockers);
-  return { message: `${numberOfLockers} lockers added successfully` };
+  return;
 }
 
 // list lockers based on role
-async function index(query, user) {
-  const { page, limit } = query;
-  const { id, role } = user;
-
+async function index(payload) {
+  const { query, user } = payload;
+  const { page, limit, ifscCode } = query;
+  const { id, roles } = user;
+  const userRole = userHelper.getHighestRole(roles);
   const offset = (page - 1) * limit;
 
-  let lockers;
-  if (role === ROLES['103']) {
-    lockers = await Locker.findAndCountAll({
-      where: { status: LOCKER_STATUS.FREEZED },
-      include: {
-        model: User,
-        where: { id },
-        attributes: [],
+  let whereCondition = {};
+  let include = [];
+
+  if (userRole === ROLES['101']) {
+    include = [
+      {
+        model: Branch,
+        where: ifscCode ? { ifsc_code: ifscCode } : {},
+        attributes: ['id', 'ifsc_code'],
       },
-      offset: offset,
-      limit: limit,
-    });
+    ];
+  } else if (userRole === ROLES['102']) {
+    const branch = await Branch.findOne({ where: { branch_manager_id: id } });
+    whereCondition = { branch_id: branch.id };
   } else {
-    const branch = await Branch.findOne({ where: { user_id: id } });
-    lockers = await Locker.findAndCountAll({
-      where: {
-        branch_id: branch.id,
-      },
-      offset: offset,
-      limit: limit,
-    });
+    whereCondition = { status: LOCKER_STATUS.FREEZED };
+    include = [{ model: User, where: { id }, attributes: ['id', 'name', 'email'] }];
   }
 
-  if (!lockers.rows.length) {
+  const lockers = await Locker.findAndCountAll({
+    where: whereCondition,
+    include,
+    offset: offset,
+    limit: limit,
+  });
+
+  if (!lockers) {
     return commonHelper.customError('No lockers found', 404);
   }
 
@@ -166,32 +183,31 @@ async function index(query, user) {
   };
 }
 
-// list a locker by id
-async function view(id, user) {
-  let locker;
-  if (user.role === ROLES['103']) {
-    locker = await Locker.findAndCountAll({
-      where: { id, status: LOCKER_STATUS.FREEZED },
-      include: {
-        model: User,
-        where: { id: user.id },
-      },
-    });
+// view a locker by id based on role
+async function view(payload) {
+  const { id, user } = payload;
+
+  const userRole = userHelper.getHighestRole(user.roles);
+
+  let whereCondition = {};
+  let include = {};
+
+  if (userRole === ROLES['101']) {
+    whereCondition = { id };
+    include = { model: User };
+  } else if (userRole === ROLES['102']) {
+    const branch = await Branch.findOne({ where: { branch_manager_id: user.id } });
+    whereCondition = { id, branch_id: branch.id };
+    include = { model: User };
   } else {
-    const branchManagerId = user.id;
-
-    const branch = await Branch.findOne({ where: { user_id: branchManagerId } });
-
-    locker = await Locker.findOne({
-      where: {
-        id,
-        branch_id: branch.id,
-      },
-      include: {
-        model: User,
-      },
-    });
+    whereCondition = { id, status: LOCKER_STATUS.FREEZED };
+    include = { model: User, where: { id: user.id } };
   }
+
+  const locker = await Locker.findAndCountAll({
+    where: whereCondition,
+    include,
+  });
 
   if (!locker) {
     return commonHelper.customError('Locker not found', 404);
@@ -200,85 +216,48 @@ async function view(id, user) {
   return locker;
 }
 
-// update a locker
-async function update(id, payload, user) {
-  const transaction = await sequelize.transaction();
+// update a locker (Admin and Branch Manager can update)
+async function update(payload) {
+  const { id, data, user } = payload;
+  const { monthlyCharge } = data;
+  const userRole = userHelper.getHighestRole(user.roles);
 
-  try {
-    const { monthlyCharge } = payload;
-    const branchManagerId = user.id;
+  const locker = await Locker.findOne({ where: { id } });
+  if (!locker) return commonHelper.customError('Locker not found', 404);
 
-    const branch = await Branch.findOne({
-      where: { user_id: branchManagerId },
-    });
-
-    if (!branch) {
-      return commonHelper.customError('Branch not found', 404);
-    }
-
-    const locker = await Locker.findOne({
-      where: {
-        id,
-        branch_id: branch.id,
-      },
-    });
-
-    if (!locker) {
-      return commonHelper.customError('Locker not found', 404);
-    }
-
-    await locker.update(
-      {
-        monthly_charge: monthlyCharge,
-      },
-      { transaction }
-    );
-    await transaction.commit();
-
-    return { message: 'Locker updated successfully' };
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
+  if (userRole === ROLES['102']) {
+    const branch = await Branch.findOne({ where: { id: locker.branch_id, branch_manager_id: user.id } });
+    if (!branch)
+      return commonHelper.customError('Other Branch manager not authorised to update this locker', 403);
   }
+
+  await locker.update({ monthly_charge: monthlyCharge });
+
+  return;
 }
 
-// deallocate a locker from customer
-async function deallocate(id, user) {
+// deallocate a locker from customer (Admin or Branch Manager can deallocate)
+async function deallocate(payload) {
+  const { id, user } = payload;
   const transaction = await sequelize.transaction();
+  const userRole = userHelper.getHighestRole(user.roles);
 
   try {
-    const branchManagerId = user.id;
+    const locker = await Locker.findOne({ where: { id } });
+    if (!locker) return commonHelper.customError('Locker not found', 404);
 
-    const branch = await Branch.findOne({
-      where: { user_id: branchManagerId },
-    });
-
-    if (!branch) {
-      return commonHelper.customError('Branch not found', 404);
-    }
-
-    const locker = await Locker.findOne({
-      where: {
-        id,
-        branch_id: branch.id,
-      },
-    });
-
-    if (!locker) {
-      return commonHelper.customError('Locker not found', 404);
+    if (userRole === ROLES['102']) {
+      const branch = await Branch.findOne({ where: { id: locker.branch_id, branch_manager_id: user.id } });
+      if (!branch)
+        return commonHelper.customError('Other Branch manager not authorised to deallocate this locker', 403);
     }
 
     const userLocker = await UserLocker.findOne({
-      where: {
-        locker_id: locker.id,
-        status: STATUS.ACTIVE,
-      },
+      where: { locker_id: locker.id, status: STATUS.ACTIVE },
       transaction,
     });
 
-    if (!userLocker || locker.status === LOCKER_STATUS.AVAILABLE) {
-      return commonHelper.customError('Locker is not currently assigned', 400);
-    }
+    if (!userLocker) return commonHelper.customError('Locker is not currently assigned', 400);
 
     await locker.update({ status: LOCKER_STATUS.AVAILABLE }, { transaction });
     await userLocker.update({ status: STATUS.INACTIVE }, { transaction });

@@ -3,8 +3,12 @@ const commonHelper = require('../helpers/commonFunctions.helper');
 
 async function assign(req, res, next) {
   try {
-    const { body, user } = req;
-    res.data = await lockerService.assign(body, user);
+    const payload = {
+      data: req.body,
+      user: req.user,
+    };
+    await lockerService.assign(payload);
+    res.message = 'Locker assigned successfully';
     res.statusCode = 200;
     next();
   } catch (error) {
@@ -14,8 +18,12 @@ async function assign(req, res, next) {
 
 async function create(req, res, next) {
   try {
-    const { body, user } = req;
-    res.data = await lockerService.create(body, user);
+    const payload = {
+      data: req.body,
+      user: req.user,
+    };
+    await lockerService.create(payload);
+    res.message = 'Lockers added successfully';
     res.statusCode = 201;
     next();
   } catch (error) {
@@ -25,8 +33,11 @@ async function create(req, res, next) {
 
 async function index(req, res, next) {
   try {
-    const { query, user } = req;
-    res.data = await lockerService.index(query, user);
+    const payload = {
+      query: req.query,
+      user: req.user,
+    };
+    res.data = await lockerService.index(payload);
     res.statusCode = 200;
     next();
   } catch (error) {
@@ -36,9 +47,11 @@ async function index(req, res, next) {
 
 async function view(req, res, next) {
   try {
-    const { user, params } = req;
-    const { id } = params;
-    res.data = await lockerService.view(id, user);
+    const payload = {
+      id: req.params.id,
+      user: req.user,
+    };
+    res.data = await lockerService.view(payload);
     res.statusCode = 200;
     next();
   } catch (error) {
@@ -48,9 +61,13 @@ async function view(req, res, next) {
 
 async function update(req, res, next) {
   try {
-    const { body, user, params } = req;
-    const { id } = params;
-    res.data = await lockerService.update(id, body, user);
+    const payload = {
+      id: req.params.id,
+      data: req.body,
+      user: req.user,
+    };
+    await lockerService.update(payload);
+    res.message = 'Locker updated successfully';
     res.statusCode = 200;
     next();
   } catch (error) {
@@ -60,9 +77,11 @@ async function update(req, res, next) {
 
 async function deallocate(req, res, next) {
   try {
-    const { params, user } = req;
-    const { id } = params;
-    await lockerService.deallocate(id, user);
+    const payload = {
+      id: req.params.id,
+      user: req.user,
+    };
+    await lockerService.deallocate(payload);
     res.message = 'Locker Deallocated successfully';
     res.statusCode = 204;
     next();

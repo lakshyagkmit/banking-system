@@ -21,7 +21,7 @@ router.post(
 router.post(
   '/',
   authMiddleware.checkAuthToken,
-  authMiddleware.authorizeRole(ROLES['102']),
+  authMiddleware.authorizeRole([ROLES['101'], ROLES['102']]),
   lockerValidator.createSchema,
   lockerController.create,
   commonHelper.sendResponse
@@ -30,7 +30,6 @@ router.post(
 router.get(
   '/',
   authMiddleware.checkAuthToken,
-  authMiddleware.authorizeRole([ROLES['102'], ROLES['103']]),
   commonValidator.querySchema,
   lockerController.index,
   lockerSerializer.serialize,
@@ -40,7 +39,6 @@ router.get(
 router.get(
   '/:id',
   authMiddleware.checkAuthToken,
-  authMiddleware.authorizeRole([ROLES['102'], ROLES['103']]),
   commonValidator.idSchema,
   lockerController.view,
   lockerSerializer.serialize,
@@ -50,7 +48,7 @@ router.get(
 router.patch(
   '/:id',
   authMiddleware.checkAuthToken,
-  authMiddleware.authorizeRole(ROLES['102']),
+  authMiddleware.authorizeRole([ROLES['101'], ROLES['102']]),
   commonValidator.idSchema,
   lockerValidator.updateSchema,
   lockerController.update,
@@ -60,7 +58,7 @@ router.patch(
 router.delete(
   '/:id',
   authMiddleware.checkAuthToken,
-  authMiddleware.authorizeRole(ROLES['102']),
+  authMiddleware.authorizeRole([ROLES['101'], ROLES['102']]),
   commonValidator.idSchema,
   lockerController.deallocate,
   commonHelper.sendResponse

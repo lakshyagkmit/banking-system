@@ -16,6 +16,12 @@ const serialize = (req, res, next) => {
     data.createdAt = locker.created_at;
     data.updatedAt = locker.updated_at;
 
+    if (locker.Branch) {
+      data.branch = {
+        ifscCode: locker.Branch.ifsc_code,
+      };
+    }
+
     if (locker.Users) {
       data.users = locker.Users.map(user => ({
         id: user.id,

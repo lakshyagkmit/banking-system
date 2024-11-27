@@ -16,6 +16,7 @@ async function createSchema(req, res, next) {
   const schema = Joi.object({
     numberOfLockers: Joi.number().required(),
     monthlyCharge: Joi.number().required(),
+    branchIfscCode: Joi.string().max(20).optional(),
   });
 
   validateHelper.validateRequest(req, res, next, schema, 'body');

@@ -3,8 +3,10 @@ const commonHelper = require('../helpers/commonFunctions.helper');
 
 async function create(req, res, next) {
   try {
-    const { body } = req;
-    res.data = await policyService.create(body);
+    const payload = {
+      data: req.body,
+    };
+    res.data = await policyService.create(payload);
     res.statusCode = 201;
     next();
   } catch (error) {
@@ -14,8 +16,10 @@ async function create(req, res, next) {
 
 async function index(req, res, next) {
   try {
-    const { query } = req;
-    res.data = await policyService.index(query);
+    const payload = {
+      query: req.query,
+    };
+    res.data = await policyService.index(payload);
     res.statusCode = 200;
     next();
   } catch (error) {
@@ -36,9 +40,11 @@ async function view(req, res, next) {
 
 async function update(req, res, next) {
   try {
-    const { params, body } = req;
-    const { id } = params;
-    res.data = await policyService.update(id, body);
+    const payload = {
+      id: req.params.id,
+      data: req.body,
+    };
+    res.data = await policyService.update(payload);
     res.message = 'policy updated successfully';
     res.statusCode = 200;
     next();
