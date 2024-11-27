@@ -1,210 +1,207 @@
 const { requestAccount, requestLocker, index, view } = require('../../src/services/applications.service');
-const { faker } = require('@faker-js/faker');
-const constants = require('../../src/constants/constants');
-const redisClient = require('../../src/config/redis');
-
-jest.mock('redis', () => {
-  const mRedisClient = {
-    connect: jest.fn().mockResolvedValue(),
-    on: jest.fn(),
-    quit: jest.fn().mockResolvedValue(),
-  };
-  return {
-    createClient: jest.fn(() => mRedisClient),
-  };
-});
-jest.mock('../../src/models', () => ({
-  UserAccount: {
-    findOne: jest.fn(),
-  },
-  Branch: {
-    findOne: jest.fn(),
-    findByPk: jest.fn(),
-  },
-  UserApplication: {
-    create: jest.fn(),
-    findAndCountAll: jest.fn(),
-    findOne: jest.fn(),
-  },
-  User: {
-    findOne: jest.fn(),
-    findByPk: jest.fn(),
-  },
-  UserLocker: {
-    findOne: jest.fn(),
-  },
-  sequelize: {
-    transaction: jest.fn(),
-  },
-}));
-
-jest.mock('../../src/helpers/commonFunctions.helper', () => ({
-  customError: jest.fn(),
-}));
-
-jest.mock('../../src/helpers/notifications.helper', () => ({
-  applicationRequestNotification: jest.fn(),
-  applicationSuccessNotification: jest.fn(),
-}));
-
-const { UserAccount, Branch, UserApplication, User, UserLocker, sequelize } = require('../../src/models');
-const commonHelper = require('../../src/helpers/commonFunctions.helper');
+const { User, UserAccount, Branch, UserApplication, UserLocker } = require('../../src/models');
 const notificationHelper = require('../../src/helpers/notifications.helper');
+const commonHelper = require('../../src/helpers/commonFunctions.helper');
 const { STATUS, APPLICATION_TYPES } = require('../../src/constants/constants');
 
-describe('Account Service Tests', () => {
-  let mockTransaction;
+jest.mock('../../src/models');
+jest.mock('../../src/helpers/notifications.helper');
+jest.mock('../../src/helpers/commonFunctions.helper');
 
+describe('Application Service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-
-    mockTransaction = {
-      commit: jest.fn(),
-      rollback: jest.fn(),
-    };
-    sequelize.transaction.mockResolvedValue(mockTransaction);
-
-    commonHelper.customError.mockImplementation((message, status) => {
-      const error = new Error(message);
-      error.statusCode = status;
-      throw error;
-    });
-  });
-
-  afterAll(async () => {
-    await redisClient.quit();
   });
 
   describe('requestAccount', () => {
     it('should create a new account request successfully', async () => {
-      // Setup mocks
-      const mockUser = {
-        id: faker.number.int(),
-        name: faker.person.fullName(),
-        email: faker.internet.email(),
+      const payload = {
+        data: {
+          branchIfscCode: 'ABC123',
+          type: 'SAVINGS',
+          nomineeName: 'John Doe',
+        },
+        user: { id: 1 },
       };
 
-      const mockBranchManager = {
-        email: faker.internet.email(),
+      const mockBranch = { id: 1, branch_manager_id: 2, ifsc_code: 'ABC123' };
+      const mockCustomer = { id: 1, name: 'Jane Doe' };
+      const mockBranchManager = { id: 2, email: 'manager@example.com' };
+
+      UserAccount.findOne.mockResolvedValueOnce(null);
+      Branch.findOne.mockResolvedValue(mockBranch);
+      User.findByPk.mockResolvedValueOnce(mockBranchManager).mockResolvedValueOnce(mockCustomer);
+      UserApplication.create.mockResolvedValue({ id: 1, user_id: 1 });
+
+      notificationHelper.applicationRequestNotification.mockResolvedValue();
+      notificationHelper.applicationSuccessNotification.mockResolvedValue();
+
+      const result = await requestAccount(payload);
+
+      expect(result).toHaveProperty('id', 1);
+      expect(notificationHelper.applicationRequestNotification).toHaveBeenCalledWith(
+        mockBranchManager.email,
+        mockCustomer.name,
+        'account'
+      );
+      expect(notificationHelper.applicationSuccessNotification).toHaveBeenCalledWith(
+        mockCustomer.email,
+        'account'
+      );
+    });
+
+    it('should return error if account already exists', async () => {
+      const payload = {
+        data: { branchIfscCode: 'ABC123', type: 'SAVINGS', nomineeName: 'John Doe' },
+        user: { id: 1 },
       };
 
-      const mockBranch = {
-        ifsc_code: 'BR123',
-        user_id: faker.number.int(),
+      const mockAccount = { id: 1 };
+      UserAccount.findOne.mockResolvedValue(mockAccount);
+
+      const result = await requestAccount(payload);
+
+      expect(result).toEqual(commonHelper.customError('Account already exist', 409));
+    });
+
+    it('should return error if branch not found', async () => {
+      const payload = {
+        data: { branchIfscCode: 'ABC123', type: 'SAVINGS', nomineeName: 'John Doe' },
+        user: { id: 1 },
       };
 
       UserAccount.findOne.mockResolvedValue(null);
-      Branch.findOne.mockResolvedValue(mockBranch);
-      User.findOne.mockResolvedValue(mockBranchManager);
-      User.findByPk.mockResolvedValue(mockUser);
-      UserApplication.create.mockResolvedValue({
-        id: faker.number.int(),
-        user_id: mockUser.id,
-      });
+      Branch.findOne.mockResolvedValue(null);
 
-      const payload = {
-        branchIfscCode: 'BR123',
-        type: APPLICATION_TYPES.ACCOUNT,
-        nomineeName: faker.person.fullName(),
-      };
+      const result = await requestAccount(payload);
 
-      const result = await requestAccount(payload, mockUser);
-
-      expect(result).toBeDefined();
-      expect(UserApplication.create).toHaveBeenCalled();
-      expect(mockTransaction.commit).toHaveBeenCalled();
-    });
-
-    it('should throw an error if account already exists', async () => {
-      UserAccount.findOne.mockResolvedValue({ id: faker.number.int() });
-
-      const payload = {
-        branchIfscCode: 'BR123',
-        type: APPLICATION_TYPES.ACCOUNT,
-        nomineeName: faker.person.fullName(),
-      };
-
-      await expect(requestAccount(payload, { id: faker.number.int() })).rejects.toThrow(
-        'Account already exist'
-      );
+      expect(result).toEqual(commonHelper.customError('No branch Found.', 404));
     });
   });
 
   describe('requestLocker', () => {
     it('should create a new locker request successfully', async () => {
-      const mockAccount = {
-        id: faker.number.int(),
-        branch_id: faker.number.int(),
+      const payload = {
+        data: { type: 'SMALL' },
+        user: { id: 1 },
       };
 
-      const mockBranch = {
-        id: faker.number.int(),
-        ifsc_code: 'BR123',
-        user_id: faker.number.int(),
+      const mockAccount = { id: 1, branch_id: 1 };
+      const mockBranch = { id: 1, branch_manager_id: 2, ifsc_code: 'ABC123' };
+      const mockLocker = null;
+      const mockBranchManager = { id: 2, email: 'manager@example.com' };
+      const mockCustomer = { id: 1, email: 'customer@example.com' };
+
+      UserAccount.findOne.mockResolvedValueOnce(mockAccount);
+      Branch.findByPk.mockResolvedValueOnce(mockBranch);
+      UserLocker.findOne.mockResolvedValue(mockLocker);
+      User.findByPk.mockResolvedValue(mockBranchManager).mockResolvedValue(mockCustomer);
+      UserApplication.create.mockResolvedValue({ id: 1, user_id: 1 });
+
+      notificationHelper.applicationRequestNotification.mockResolvedValue();
+      notificationHelper.applicationSuccessNotification.mockResolvedValue();
+
+      const result = await requestLocker(payload);
+
+      expect(result).toHaveProperty('id', 1);
+    });
+
+    it('should return error if locker already exists', async () => {
+      const payload = {
+        data: { type: 'SMALL' },
+        user: { id: 1 },
       };
 
-      UserAccount.findOne.mockResolvedValue(mockAccount);
-      Branch.findByPk.mockResolvedValue(mockBranch);
-      UserLocker.findOne.mockResolvedValue(null);
-      UserApplication.create.mockResolvedValue({ id: faker.number.int() });
+      const mockLocker = { id: 1, status: STATUS.ACTIVE };
+      UserAccount.findOne.mockResolvedValue({ id: 1, branch_id: 1 });
+      UserLocker.findOne.mockResolvedValue(mockLocker);
 
-      const payload = { type: APPLICATION_TYPES.LOCKER };
-      const result = await requestLocker(payload, { id: faker.number.int() });
+      const result = await requestLocker(payload);
 
-      expect(result).toBeDefined();
-      expect(UserApplication.create).toHaveBeenCalled();
-      expect(mockTransaction.commit).toHaveBeenCalled();
+      expect(result).toEqual(commonHelper.customError('Locker already exist', 409));
+    });
+
+    it('should return error if no account exists', async () => {
+      const payload = {
+        data: { type: 'SMALL' },
+        user: { id: 1 },
+      };
+
+      UserAccount.findOne.mockResolvedValue(null);
+
+      const result = await requestLocker(payload);
+
+      expect(result).toEqual(
+        commonHelper.customError('Account does not exist, Cannot request for locker', 409)
+      );
     });
   });
 
   describe('index', () => {
-    it('should return paginated applications', async () => {
-      const mockApplications = {
-        rows: [{ id: faker.number.int() }],
-        count: 1,
+    it('should list applications successfully for branch manager', async () => {
+      const payload = {
+        query: { page: 1, limit: 10, requestType: 'accounts' },
+        user: { id: 1 },
       };
 
-      Branch.findOne.mockResolvedValue({ ifsc_code: 'BR123' });
-      UserApplication.findAndCountAll.mockResolvedValue(mockApplications);
+      const mockBranch = { id: 1, branch_manager_id: 1, ifsc_code: 'ABC123' };
+      Branch.findOne.mockResolvedValue(mockBranch);
+      UserApplication.findAndCountAll.mockResolvedValue({
+        count: 2,
+        rows: [
+          { id: 1, user_id: 1, type: 'SAVINGS' },
+          { id: 2, user_id: 2, type: 'SAVINGS' },
+        ],
+      });
 
-      const query = { page: 1, limit: 10, requestType: 'accounts' };
-      const user = { id: faker.number.int(), role: 'branch_manager' };
+      const result = await index(payload);
 
-      const result = await index(query, user);
+      expect(result.totalItems).toBe(2);
+      expect(result.totalPages).toBe(1);
+      expect(result.currentPage).toBe(1);
+      expect(result.applications.length).toBe(2);
+    });
 
-      expect(result).toHaveProperty('totalItems', 1);
-      expect(result).toHaveProperty('applications');
+    it('should return error if no applications found', async () => {
+      const payload = {
+        query: { page: 1, limit: 10, requestType: 'accounts' },
+        user: { id: 1 },
+      };
+
+      Branch.findOne.mockResolvedValueOnce({ id: 1 });
+      UserApplication.findAndCountAll.mockResolvedValue({ count: 0, rows: [] });
+
+      const result = await index(payload);
+
+      expect(result).toEqual({ applications: [], currentPage: 1, totalItems: 0, totalPages: 0 });
     });
   });
 
   describe('view', () => {
-    it('should return an application by id', async () => {
-      const mockApplication = {
-        id: faker.number.int(),
-        type: APPLICATION_TYPES.ACCOUNT,
-      };
+    it('should view an application by id successfully', async () => {
+      const payload = { id: 1, user: { id: 1 } };
+      const mockBranch = { id: 1, branch_manager_id: 1, ifsc_code: 'ABC123' };
+      const mockApplication = { id: 1, user_id: 1, type: 'SAVINGS' };
+      const mockUser = { id: 1, name: 'Jane Doe' };
 
-      Branch.findOne.mockResolvedValue({ ifsc_code: 'BR123' });
+      Branch.findOne.mockResolvedValue(mockBranch);
       UserApplication.findOne.mockResolvedValue(mockApplication);
+      User.findByPk.mockResolvedValue(mockUser);
 
-      const result = await view(mockApplication.id, {
-        id: faker.number.int(),
-        role: 'branch_manager',
-      });
+      const result = await view(payload);
 
-      expect(result).toEqual(mockApplication);
+      expect(result).toHaveProperty('id', 1);
+      expect(result.user_id).toBe(1);
     });
 
-    it('should throw error if application not found', async () => {
-      Branch.findOne.mockResolvedValue({ ifsc_code: 'BR123' });
-      UserApplication.findOne.mockResolvedValue(null);
+    it('should return error if application not found', async () => {
+      const payload = { id: 1, user: { id: 1 } };
+      Branch.findOne.mockResolvedValueOnce({ id: 1 });
+      UserApplication.findOne.mockResolvedValueOnce(null);
 
-      await expect(
-        view(faker.number.int(), {
-          id: faker.number.int(),
-          role: 'branch_manager',
-        })
-      ).rejects.toThrow('Application not found');
+      const result = await view(payload);
+
+      expect(result).toEqual(commonHelper.customError('Application not found', 404));
     });
   });
 });

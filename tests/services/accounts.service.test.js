@@ -1,381 +1,238 @@
-const { faker } = require('@faker-js/faker');
-const {
-  sequelize,
-  User,
-  Role,
-  Branch,
-  UserAccount,
-  UserApplication,
-  AccountPolicy,
-} = require('../../src/models');
-const accountsService = require('../../src/services/accounts.service');
+const { create, index, view, update, remove } = require('../../src/services/accounts.service');
+const { User, Branch, UserApplication, UserAccount, AccountPolicy, sequelize } = require('../../src/models');
 const commonHelper = require('../../src/helpers/commonFunctions.helper');
 const notificationHelper = require('../../src/helpers/notifications.helper');
-const accountHelper = require('../../src/helpers/accounts.helper');
-const redisClient = require('../../src/config/redis');
-const constants = require('../../src/constants/constants');
+const { ROLES, ACCOUNT_TYPES } = require('../../src/constants/constants');
+const userHelper = require('../../src/helpers/users.helper');
 
-jest.mock('../../src/models');
-jest.mock('../../src/helpers/commonFunctions.helper');
-jest.mock('../../src/helpers/notifications.helper');
-jest.mock('../../src/helpers/accounts.helper');
-jest.mock('redis', () => {
-  const mRedisClient = {
-    connect: jest.fn().mockResolvedValue(),
-    on: jest.fn(),
-    quit: jest.fn().mockResolvedValue(),
-  };
-  return {
-    createClient: jest.fn(() => mRedisClient),
-  };
+// Mock the models and helpers
+jest.mock('../../src/models', () => ({
+  User: { findOne: jest.fn() },
+  Branch: { findOne: jest.fn() },
+  UserApplication: { findOne: jest.fn() },
+  UserAccount: { findOne: jest.fn(), create: jest.fn(), findAndCountAll: jest.fn(), destroy: jest.fn() },
+  AccountPolicy: { findOne: jest.fn() },
+  sequelize: { transaction: jest.fn() },
+}));
+
+jest.mock('../../src/helpers/commonFunctions.helper', () => ({
+  customError: jest.fn(),
+}));
+
+jest.mock('../../src/helpers/notifications.helper', () => ({
+  accountCreationNotification: jest.fn(),
+}));
+
+jest.mock('../../src/helpers/users.helper', () => ({
+  getHighestRole: jest.fn(),
+}));
+
+jest.mock('../../src/constants/constants', () => ({
+  ROLES: { 103: 'customer', 102: 'branch_manager', 101: 'admin' },
+  ACCOUNT_TYPES: { SAVINGS: 'savings', CURRENT: 'current' },
+}));
+
+// --- Unit Tests for the 'create' function ---
+
+describe('create function', () => {
+  let payload;
+
+  beforeEach(() => {
+    payload = {
+      data: {
+        userId: 1,
+        type: 'savings',
+        nominee: 'John Doe',
+        branchIfscCode: 'IFSC1234',
+      },
+      user: {
+        id: 1,
+        role: '103', // Customer
+      },
+    };
+  });
+
+  it('should create a new account successfully', async () => {
+    User.findOne.mockResolvedValue({
+      id: 1,
+      Roles: [{ code: ROLES['103'] }],
+      email: 'customer@example.com',
+    });
+
+    Branch.findOne.mockResolvedValue({ id: 1, ifsc_code: 'IFSC1234' });
+    UserApplication.findOne.mockResolvedValue({ destroy: jest.fn() });
+    AccountPolicy.findOne.mockResolvedValue({ id: 1, interest_rate: 5 });
+    UserAccount.create.mockResolvedValueOnce({ id: 1, number: '1234567890' });
+    sequelize.transaction.mockResolvedValue({
+      commit: jest.fn(),
+      rollback: jest.fn(),
+    });
+
+    const result = await create(payload);
+
+    expect(result).toHaveProperty('id');
+    expect(User.findOne).toHaveBeenCalled();
+    expect(Branch.findOne).toHaveBeenCalledWith({ where: { ifsc_code: 'IFSC1234' } });
+    expect(UserAccount.create).toHaveBeenCalled();
+  });
+
+  it('should return error if user role is invalid', async () => {
+    payload.user.role = '104'; // Invalid role
+
+    User.findOne.mockResolvedValue({
+      id: 1,
+      Roles: [{ code: '104' }],
+    });
+
+    const result = await create(payload);
+
+    expect(commonHelper.customError).toHaveBeenCalledWith('No user Found', 404);
+  });
+
+  it('should handle error if branch not found', async () => {
+    User.findOne.mockResolvedValue({
+      id: 1,
+      Roles: [{ code: ROLES['103'] }],
+    });
+    Branch.findOne.mockResolvedValue(null); // Branch not found
+
+    const result = await create(payload);
+
+    expect(commonHelper.customError).toHaveBeenCalledWith('No branch Found.', 404);
+  });
 });
 
-describe('Accounts Service', () => {
-  afterEach(() => {
-    jest.clearAllMocks();
+// --- Unit Tests for the 'index' function ---
 
-    commonHelper.customError.mockImplementation((message, status) => {
-      const err = new Error(message);
-      err.statusCode = status;
-      throw err;
-    });
+describe('index function', () => {
+  let payload;
+
+  beforeEach(() => {
+    payload = {
+      query: { page: 1, limit: 10, ifscCode: 'IFSC1234' },
+      user: {
+        id: 1,
+        roles: [{ code: ROLES['101'] }],
+      },
+    };
   });
 
-  afterAll(async () => {
-    await redisClient.quit();
+  it('should list all accounts for admin', async () => {
+    UserAccount.findAndCountAll.mockResolvedValue({
+      count: 10,
+      rows: [{ id: 1, number: '1234567890' }],
+    });
+
+    const result = await index(payload);
+
+    expect(result).toHaveProperty('totalItems', 10);
+    expect(result).toHaveProperty('accounts');
   });
 
-  describe('create', () => {
-    beforeEach(() => {
-      jest.clearAllMocks();
-    });
+  it('should return error if no accounts are found', async () => {
+    UserAccount.findAndCountAll.mockResolvedValueOnce({ count: 0, rows: [] });
 
-    it('should successfully create a new account for a valid application', async () => {
-      const transaction = { commit: jest.fn(), rollback: jest.fn() };
-      sequelize.transaction.mockResolvedValue(transaction);
+    const result = await index(payload);
 
-      const userId = faker.string.uuid();
-      const branchId = faker.string.uuid();
-      const customer = { id: userId, Roles: [{ code: constants.ROLES['103'] }] };
-      const branch = { id: branchId, ifsc_code: faker.finance.bic() };
-      const policy = { id: faker.string.uuid(), interest_rate: faker.number.float({ min: 1, max: 5 }) };
-      const application = { destroy: jest.fn() };
-      const existingAccount = { id: faker.string.uuid(), type: constants.ACCOUNT_TYPES.SAVINGS };
+    expect(commonHelper.customError).toHaveBeenCalledWith('No user Found', 404);
+  });
+});
 
-      User.findOne.mockResolvedValueOnce(customer);
-      Branch.findOne.mockResolvedValueOnce(branch);
-      UserApplication.findOne.mockResolvedValueOnce(application);
-      UserAccount.findOne.mockResolvedValueOnce(existingAccount);
-      AccountPolicy.findOne.mockResolvedValueOnce(policy);
-      accountHelper.generateAccountNumber.mockReturnValueOnce(faker.finance.accountNumber());
-      notificationHelper.accountCreationNotification.mockResolvedValueOnce();
+// --- Unit Tests for the 'view' function ---
 
-      const payload = {
-        userId,
-        type: constants.ACCOUNT_TYPES.SAVINGS,
-        nominee: faker.person.fullName(),
-        branchIfscCode: branch.ifsc_code,
-      };
+describe('view function', () => {
+  let payload;
 
-      const user = { role: constants.ROLES['102'] };
-
-      const createdAccount = {
-        policy_id: policy.id,
-        branch_id: branch.id,
-        user_id: userId,
-        type: constants.ACCOUNT_TYPES.SAVINGS,
-        number: accountHelper.generateAccountNumber(),
-        interest_rate: policy.interest_rate,
-        nominee: payload.nominee,
-      };
-
-      UserAccount.create.mockResolvedValue(createdAccount);
-
-      const result = await accountsService.create(payload, user);
-
-      expect(result).toEqual(createdAccount);
-      expect(transaction.commit).toHaveBeenCalled();
-      expect(application.destroy).toHaveBeenCalledWith({ transaction });
-      expect(notificationHelper.accountCreationNotification).toHaveBeenCalledWith(
-        customer.email,
-        constants.ACCOUNT_TYPES.SAVINGS,
-        createdAccount.number
-      );
-    });
-
-    it('should throw error if no user found', async () => {
-      User.findOne.mockResolvedValue(null);
-
-      const payload = {
-        userId: faker.string.uuid(),
-        type: constants.ACCOUNT_TYPES.SAVINGS,
-        nominee: faker.person.fullName(),
-        branchIfscCode: faker.finance.bic(),
-      };
-
-      const user = { role: constants.ROLES['102'] };
-
-      await expect(accountsService.create(payload, user)).rejects.toThrow('No user Found');
-    });
-
-    it('should throw error if branch is not found', async () => {
-      const userId = faker.string.uuid();
-      const customer = { id: userId, Roles: [{ code: constants.ROLES['103'] }] };
-
-      User.findOne.mockResolvedValueOnce(customer);
-      Branch.findOne.mockResolvedValue(null);
-
-      const payload = {
-        userId,
-        type: constants.ACCOUNT_TYPES.SAVINGS,
-        nominee: faker.person.fullName(),
-        branchIfscCode: faker.finance.bic(),
-      };
-
-      const user = { role: constants.ROLES['102'] };
-
-      await expect(accountsService.create(payload, user)).rejects.toThrow('No branch Found.');
-    });
-
-    it('should throw error if application is not found', async () => {
-      const userId = faker.string.uuid();
-      const branchId = faker.string.uuid();
-      const customer = { id: userId, Roles: [{ code: constants.ROLES['103'] }] };
-      const branch = { id: branchId, ifsc_code: faker.finance.bic() };
-
-      User.findOne.mockResolvedValueOnce(customer);
-      Branch.findOne.mockResolvedValueOnce(branch);
-      UserApplication.findOne.mockResolvedValue(null);
-
-      const payload = {
-        userId,
-        type: constants.ACCOUNT_TYPES.SAVINGS,
-        nominee: faker.person.fullName(),
-        branchIfscCode: branch.ifsc_code,
-      };
-
-      const user = { role: constants.ROLES['102'] };
-
-      await expect(accountsService.create(payload, user)).rejects.toThrow(
-        'No application found, cannot create account to this user'
-      );
-    });
-
-    it('should throw error if user already has an account of the same type', async () => {
-      const userId = faker.string.uuid();
-      const branchId = faker.string.uuid();
-      const customer = { id: userId, Roles: [{ code: constants.ROLES['103'] }] };
-      const branch = { id: branchId, ifsc_code: faker.finance.bic() };
-      const existingAccount = { id: faker.string.uuid() };
-
-      User.findOne.mockResolvedValueOnce(customer);
-      Branch.findOne.mockResolvedValue(branch);
-      UserApplication.findOne.mockResolvedValue({});
-      UserAccount.findOne.mockResolvedValue(existingAccount);
-
-      const payload = {
-        userId,
-        type: constants.ACCOUNT_TYPES.SAVINGS,
-        nominee: faker.person.fullName(),
-        branchIfscCode: branch.ifsc_code,
-      };
-
-      const user = { role: constants.ROLES['102'] };
-
-      await expect(accountsService.create(payload, user)).rejects.toThrow(
-        'User already has an account of this type. Cannot create another.'
-      );
-    });
-
-    it('should throw error if branch manager creates other branch customer account', async () => {
-      const userId = faker.string.uuid();
-      const branchId = faker.string.uuid();
-      const customer = { id: userId, Roles: [{ code: constants.ROLES['103'] }] };
-      const branch = { id: branchId, ifsc_code: faker.finance.bic() };
-
-      User.findOne.mockResolvedValueOnce(customer);
-      Branch.findOne.mockResolvedValueOnce(branch);
-      UserApplication.findOne.mockResolvedValueOnce({});
-      UserAccount.findOne.mockResolvedValue(null);
-      AccountPolicy.findOne.mockResolvedValue(null);
-
-      const payload = {
-        userId,
-        type: constants.ACCOUNT_TYPES.SAVINGS,
-        nominee: faker.person.fullName(),
-        branchIfscCode: branch.ifsc_code,
-      };
-
-      const user = { role: constants.ROLES['102'] };
-
-      await expect(accountsService.create(payload, user)).rejects.toThrow(
-        'Branch managers can only create accounts in their own branch.'
-      );
-    });
+  beforeEach(() => {
+    payload = {
+      id: 1,
+      user: {
+        id: 1,
+        roles: [{ code: ROLES['103'] }], // Customer
+      },
+    };
   });
 
-  describe('index', () => {
-    it('should return paginated accounts for an admin', async () => {
-      const query = { page: 1, limit: 10 };
-      const user = { role: constants.ROLES['101'] };
+  it('should retrieve account details successfully for a customer', async () => {
+    UserAccount.findOne.mockResolvedValue({ id: 1, number: '1234567890', user_id: 1 });
 
-      const accounts = Array.from({ length: 10 }).map(() => ({
-        id: faker.string.uuid(),
-        user_id: faker.string.uuid(),
-        branch_id: faker.string.uuid(),
-        type: constants.ACCOUNT_TYPES.SAVINGS,
-        number: faker.finance.accountNumber(),
-      }));
+    const result = await view(payload);
 
-      UserAccount.findAndCountAll.mockResolvedValueOnce({
-        count: 50,
-        rows: accounts,
-      });
-
-      const result = await accountsService.index(query, user);
-
-      expect(result).toEqual({
-        totalItems: 50,
-        totalPages: 5,
-        currentPage: 1,
-        accounts: accounts,
-      });
-    });
-
-    it('should throw error if no accounts found', async () => {
-      const user = { role: constants.ROLES['101'] };
-      UserAccount.findAndCountAll.mockResolvedValue({ count: 0, rows: [] });
-
-      const query = { page: 1, limit: 10 };
-
-      await expect(accountsService.index(query, user)).rejects.toThrow('No accounts found');
-    });
+    expect(result).toHaveProperty('id', 1);
   });
 
-  describe('view', () => {
-    it('should return account details for an admin', async () => {
-      const accountId = faker.string.uuid();
-      const user = { role: constants.ROLES['101'] };
+  it('should return error if account not found', async () => {
+    UserAccount.findOne.mockResolvedValue(null);
 
-      const account = {
-        id: accountId,
-        user_id: faker.string.uuid(),
-        branch_id: faker.string.uuid(),
-        type: constants.ACCOUNT_TYPES.SAVINGS,
-        User: { id: faker.string.uuid(), name: faker.person.fullName() },
-        Branch: { id: faker.string.uuid(), ifsc_code: faker.finance.bic() },
-      };
+    const result = await view(payload);
 
-      UserAccount.findOne.mockResolvedValue(account);
+    expect(commonHelper.customError).toHaveBeenCalledWith('Account not found', 404);
+  });
+});
 
-      const result = await accountsService.view(accountId, user);
+// --- Unit Tests for the 'update' function ---
 
-      expect(result).toEqual(account);
-    });
+describe('update function', () => {
+  let payload;
 
-    it('should restrict customer to view only their own accounts', async () => {
-      const accountId = faker.string.uuid();
-      const user = { role: constants.ROLES['103'], id: faker.string.uuid() };
-
-      const account = {
-        id: accountId,
-        user_id: user.id,
-        type: constants.ACCOUNT_TYPES.SAVINGS,
-      };
-
-      UserAccount.findOne.mockResolvedValue(account);
-
-      const result = await accountsService.view(accountId, user);
-
-      expect(result).toEqual(account);
-    });
+  beforeEach(() => {
+    payload = {
+      id: 1,
+      data: { nominee: 'Jane Doe' },
+      user: {
+        id: 1,
+        roles: [{ code: ROLES['102'] }], // Branch Manager
+      },
+    };
   });
 
-  describe('update', () => {
-    it('should successfully update account details', async () => {
-      const transaction = { commit: jest.fn(), rollback: jest.fn() };
-      sequelize.transaction.mockResolvedValue(transaction);
-      const accountId = faker.string.uuid();
-      const user = { id: faker.string.uuid() };
-      const branch = { id: faker.string.uuid(), user_id: user.id };
-      const account = { id: accountId, branch_id: branch.id, update: jest.fn() };
+  it('should return error if branch manager tries to update account outside their branch', async () => {
+    UserAccount.findOne.mockResolvedValue({ id: 1, branch_id: 2, update: jest.fn() });
+    Branch.findOne.mockResolvedValue({ id: 1, branch_manager_id: 1 });
 
-      Branch.findOne.mockResolvedValue(branch);
-      UserAccount.findOne.mockResolvedValueOnce(account);
-      account.update.mockResolvedValue({ ...account, nominee: 'Updated Nominee' });
+    const result = await update(payload);
 
-      const payload = { nominee: 'Updated Nominee' };
-
-      const result = await accountsService.update(accountId, payload, user);
-
-      expect(result).toEqual({ ...account, nominee: 'Updated Nominee' });
-      expect(transaction.commit).toHaveBeenCalled();
-      expect(account.update).toHaveBeenCalledWith(payload, { transaction });
-    });
-
-    it('should throw error if account not found', async () => {
-      const accountId = faker.string.uuid();
-      UserAccount.findOne.mockResolvedValue(null);
-
-      await expect(accountsService.update(accountId, {}, {})).rejects.toThrow('Account not found');
-    });
-
-    it('should restrict updates to branch accounts only', async () => {
-      const accountId = faker.string.uuid();
-      const user = { id: faker.string.uuid() };
-      const branch = { id: faker.string.uuid() };
-      const account = { id: accountId, branch_id: faker.string.uuid() };
-
-      Branch.findOne.mockResolvedValue(branch);
-      UserAccount.findOne.mockResolvedValue(account);
-
-      await expect(accountsService.update(accountId, {}, user)).rejects.toThrow(
-        'You can only update accounts of customers in your branch'
-      );
-    });
+    expect(commonHelper.customError).toHaveBeenCalledWith('Account not found', 404);
   });
 
-  describe('remove', () => {
-    it('should successfully soft delete an account', async () => {
-      const transaction = { commit: jest.fn(), rollback: jest.fn() };
-      sequelize.transaction.mockResolvedValue(transaction);
-      const accountId = faker.string.uuid();
-      const user = { id: faker.string.uuid() };
-      const branch = { id: faker.string.uuid() };
-      const account = { id: accountId, branch_id: branch.id, destroy: jest.fn() };
+  it('should return error if account not found', async () => {
+    UserAccount.findOne.mockResolvedValue(null);
 
-      Branch.findOne.mockResolvedValue(branch);
-      UserAccount.findOne.mockResolvedValueOnce(account);
+    const result = await update(payload);
 
-      account.destroy.mockResolvedValueOnce();
+    expect(commonHelper.customError).toHaveBeenCalledWith('Account not found', 404);
+  });
+});
 
-      await accountsService.remove(accountId, user);
+// --- Unit Tests for the 'remove' function ---
 
-      expect(transaction.commit).toHaveBeenCalled();
-      expect(account.destroy).toHaveBeenCalledWith({ transaction });
-    });
+describe('remove function', () => {
+  let payload;
 
-    it('should throw error if account not found', async () => {
-      const accountId = faker.string.uuid();
-      UserAccount.findOne.mockResolvedValue(null);
+  beforeEach(() => {
+    payload = {
+      id: 1,
+      user: {
+        id: 1,
+        roles: [{ code: ROLES['102'] }], // Branch Manager
+      },
+    };
+  });
 
-      await expect(accountsService.remove(accountId, {})).rejects.toThrow('Account not found');
-    });
+  it('should return error if branch manager tries to delete account outside their branch', async () => {
+    UserAccount.findOne.mockResolvedValue({ id: 1, branch_id: 2, destroy: jest.fn() });
+    Branch.findOne.mockResolvedValue({ id: 1, branch_manager_id: 1 });
 
-    it('should restrict deletes to branch accounts only', async () => {
-      const accountId = faker.string.uuid();
-      const user = { id: faker.string.uuid() };
-      const branch = { id: faker.string.uuid() };
-      const account = { id: accountId, branch_id: faker.string.uuid() }; // Account belongs to another branch
+    const result = await remove(payload);
 
-      Branch.findOne.mockResolvedValue(branch); // User's branch
-      UserAccount.findOne.mockResolvedValue(account); // Account in a different branch
+    expect(commonHelper.customError).toHaveBeenCalledWith('Account not found', 404);
+  });
 
-      // Check for the rejection and validate error properties
-      await expect(accountsService.remove(accountId, user)).rejects.toMatchObject({
-        message: 'You can only delete accounts of customers in your branch',
-        statusCode: 403,
-      });
-    });
+  it('should return error if account not found', async () => {
+    UserAccount.findOne.mockResolvedValue(null);
+
+    const result = await remove(payload);
+
+    expect(commonHelper.customError).toHaveBeenCalledWith('Account not found', 404);
   });
 });

@@ -1,90 +1,115 @@
-const authMiddleware = require('../../src/middlewares/auth.middleware');
 const jwt = require('jsonwebtoken');
-const constants = require('../../src/constants/constants');
+const { checkAuthToken, authorizeRole } = require('../../src/middlewares/auth.middleware');
+const { decryptJwt } = require('../../src/helpers/jwt.helper');
 
 jest.mock('jsonwebtoken');
+jest.mock('../../src/helpers/jwt.helper');
 
-describe('Auth Middleware', () => {
-  let req, res, next;
+describe('Authorization Middleware', () => {
+  const mockReq = {
+    headers: {
+      authorization: 'Bearer mockEncryptedToken',
+    },
+  };
+  const mockRes = {
+    status: jest.fn().mockReturnThis(),
+    json: jest.fn(),
+  };
+  const mockNext = jest.fn();
 
   beforeEach(() => {
-    req = { headers: {} };
-    res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
-    next = jest.fn();
     jest.clearAllMocks();
   });
 
   describe('checkAuthToken', () => {
-    it('should return 401 if no token is provided', () => {
-      req.headers['authorization'] = null;
+    it('should return 401 if token is missing', () => {
+      const req = { headers: {} };
 
-      authMiddleware.checkAuthToken(req, res, next);
+      checkAuthToken(req, mockRes, mockNext);
 
-      expect(res.status).toHaveBeenCalledWith(401);
-      expect(res.json).toHaveBeenCalledWith({ message: 'Access denied. Token is missing.' });
-      expect(next).not.toHaveBeenCalled();
+      expect(mockRes.status).toHaveBeenCalledWith(401);
+      expect(mockRes.json).toHaveBeenCalledWith({ message: 'Access denied. Token is missing.' });
+      expect(mockNext).not.toHaveBeenCalled();
     });
 
     it('should return 403 if token is invalid or expired', () => {
-      req.headers['authorization'] = 'Bearer invalid_token';
-      jwt.verify.mockImplementation((token, secret, callback) => {
-        callback(new Error('Invalid token'), null);
-      });
+      decryptJwt.mockReturnValue('mockDecryptedToken');
+      jwt.verify.mockImplementation((_, __, callback) => callback(new Error('Token expired')));
 
-      authMiddleware.checkAuthToken(req, res, next);
+      checkAuthToken(mockReq, mockRes, mockNext);
 
-      expect(res.status).toHaveBeenCalledWith(403);
-      expect(res.json).toHaveBeenCalledWith({ message: 'Invalid or expired token.' });
-      expect(next).not.toHaveBeenCalled();
+      expect(decryptJwt).toHaveBeenCalledWith('mockEncryptedToken');
+      expect(jwt.verify).toHaveBeenCalledWith(
+        'mockDecryptedToken',
+        process.env.JWT_SECRET,
+        expect.any(Function)
+      );
+      expect(mockRes.status).toHaveBeenCalledWith(403);
+      expect(mockRes.json).toHaveBeenCalledWith({ message: 'Invalid or expired token.' });
+      expect(mockNext).not.toHaveBeenCalled();
     });
 
-    it('should call next() if token is valid', () => {
-      req.headers['authorization'] = 'Bearer valid_token';
-      const mockUser = { id: 1, role: 'admin' };
-      jwt.verify.mockImplementation((token, secret, callback) => {
-        callback(null, mockUser);
-      });
+    it('should call next if token is valid', () => {
+      decryptJwt.mockReturnValue('mockDecryptedToken');
+      jwt.verify.mockImplementation((_, __, callback) => callback(null, { id: 1, roles: ['user'] }));
 
-      authMiddleware.checkAuthToken(req, res, next);
+      checkAuthToken(mockReq, mockRes, mockNext);
 
-      expect(jwt.verify).toHaveBeenCalledWith('valid_token', process.env.JWT_SECRET, expect.any(Function));
-      expect(req.user).toEqual(mockUser);
-      expect(next).toHaveBeenCalled();
+      expect(decryptJwt).toHaveBeenCalledWith('mockEncryptedToken');
+      expect(jwt.verify).toHaveBeenCalledWith(
+        'mockDecryptedToken',
+        process.env.JWT_SECRET,
+        expect.any(Function)
+      );
+      expect(mockReq.user).toEqual({ id: 1, roles: ['user'] });
+      expect(mockNext).toHaveBeenCalled();
     });
   });
 
   describe('authorizeRole', () => {
-    it('should return 403 if user role is not authorized', () => {
-      req.user = { role: constants.ROLES['103'] };
-      const middleware = authMiddleware.authorizeRole([constants.ROLES['101'], constants.ROLES['102']]);
+    const mockUserReq = {
+      ...mockReq,
+      user: {
+        roles: ['admin', 'user'],
+      },
+    };
 
-      middleware(req, res, next);
+    it('should call next if user has the required role', () => {
+      const middleware = authorizeRole('admin');
+      middleware(mockUserReq, mockRes, mockNext);
 
-      expect(res.status).toHaveBeenCalledWith(403);
-      expect(res.json).toHaveBeenCalledWith({
-        error: 'Forbidden: You are not authorized to access this resource',
+      expect(mockNext).toHaveBeenCalled();
+      expect(mockRes.status).not.toHaveBeenCalled();
+    });
+
+    it('should return 403 if user does not have the required role', () => {
+      const middleware = authorizeRole('superadmin');
+      middleware(mockUserReq, mockRes, mockNext);
+
+      expect(mockRes.status).toHaveBeenCalledWith(403);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        message: 'Forbidden: You are not authorized to access this resource',
       });
-      expect(next).not.toHaveBeenCalled();
+      expect(mockNext).not.toHaveBeenCalled();
     });
 
-    it('should call next() if user role is authorized', () => {
-      req.user = { role: constants.ROLES['101'] };
-      const middleware = authMiddleware.authorizeRole([constants.ROLES['101'], constants.ROLES['102']]);
+    it('should handle multiple roles and allow access if any role matches', () => {
+      const middleware = authorizeRole(['admin', 'superadmin']);
+      middleware(mockUserReq, mockRes, mockNext);
 
-      middleware(req, res, next);
-
-      expect(next).toHaveBeenCalled();
-      expect(res.status).not.toHaveBeenCalled();
+      expect(mockNext).toHaveBeenCalled();
+      expect(mockRes.status).not.toHaveBeenCalled();
     });
 
-    it('should handle a single role passed as a string', () => {
-      req.user = { role: constants.ROLES['103'] };
-      const middleware = authMiddleware.authorizeRole(constants.ROLES['103']);
+    it('should return 403 if none of the roles match', () => {
+      const middleware = authorizeRole(['superadmin', 'editor']);
+      middleware(mockUserReq, mockRes, mockNext);
 
-      middleware(req, res, next);
-
-      expect(next).toHaveBeenCalled();
-      expect(res.status).not.toHaveBeenCalled();
+      expect(mockRes.status).toHaveBeenCalledWith(403);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        message: 'Forbidden: You are not authorized to access this resource',
+      });
+      expect(mockNext).not.toHaveBeenCalled();
     });
   });
 });

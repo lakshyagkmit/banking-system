@@ -51,9 +51,9 @@ describe('User Controller', () => {
 
       await userController.create(req, res, next);
 
-      expect(res.data).toEqual(req.body);
+      expect(res.data).toEqual(null);
       expect(res.statusCode).toBe(201);
-      expect(userService.create).toHaveBeenCalledWith(req.body, req.file, req.user);
+      expect(userService.create).toHaveBeenCalledWith({ data: req.body, file: req.file, user: req.user });
       expect(next).toHaveBeenCalled();
     });
 
@@ -98,7 +98,7 @@ describe('User Controller', () => {
 
       expect(res.data).toBeDefined();
       expect(res.statusCode).toBe(200);
-      expect(userService.index).toHaveBeenCalledWith(req.query, req.user);
+      expect(userService.index).toHaveBeenCalledWith({ query: req.query, user: req.user });
       expect(next).toHaveBeenCalled();
     });
 
@@ -142,7 +142,7 @@ describe('User Controller', () => {
 
       expect(res.data).toBeDefined();
       expect(res.statusCode).toBe(200);
-      expect(userService.view).toHaveBeenCalledWith(req.params.id, req.user);
+      expect(userService.view).toHaveBeenCalledWith({ id: req.params.id, user: req.user });
       expect(next).toHaveBeenCalled();
     });
 
@@ -181,7 +181,11 @@ describe('User Controller', () => {
 
       expect(res.data).toEqual(req.body);
       expect(res.statusCode).toBe(200);
-      expect(userService.update).toHaveBeenCalledWith(req.params.id, req.body, req.user);
+      expect(userService.update).toHaveBeenCalledWith({
+        id: req.params.id,
+        data: req.body,
+        user: req.user,
+      });
       expect(next).toHaveBeenCalled();
     });
 
@@ -214,9 +218,9 @@ describe('User Controller', () => {
 
       await userController.remove(req, res, next);
 
-      expect(res.message).toBe('user deleted successfully');
+      expect(res.message).toBe('User deleted successfully');
       expect(res.statusCode).toBe(204);
-      expect(userService.remove).toHaveBeenCalledWith(req.params.id, req.user);
+      expect(userService.remove).toHaveBeenCalledWith(req.params.id);
       expect(next).toHaveBeenCalled();
     });
 

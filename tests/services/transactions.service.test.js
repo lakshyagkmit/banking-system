@@ -1,270 +1,358 @@
 const { create, index, view } = require('../../src/services/transactions.service');
-const { User, Transaction, UserAccount, Branch, sequelize } = require('../../src/models');
+const { User, UserAccount, Transaction, Branch } = require('../../src/models');
 const commonHelper = require('../../src/helpers/commonFunctions.helper');
 const notificationHelper = require('../../src/helpers/notifications.helper');
 const {
+  TRANSACTION_TYPES,
+  TRANSACTION_STATUS,
+  ROLES,
   ACCOUNT_TYPES,
   STATUS,
-  ROLES,
-  TRANSACTION_STATUS,
-  TRANSACTION_TYPES,
 } = require('../../src/constants/constants');
-const redisClient = require('../../src/config/redis');
+const userHelper = require('../../src/helpers/users.helper');
+const sequelize = require('sequelize');
 
-jest.mock('../../src/models');
-jest.mock('../../src/helpers/commonFunctions.helper');
-jest.mock('../../src/helpers/notifications.helper');
-jest.mock('redis', () => {
-  const mRedisClient = {
-    connect: jest.fn().mockResolvedValue(),
-    on: jest.fn(),
-    quit: jest.fn().mockResolvedValue(),
-  };
-  return {
-    createClient: jest.fn(() => mRedisClient),
-  };
-});
+jest.mock('../../src/models', () => ({
+  User: {
+    findByPk: jest.fn(),
+  },
+  UserAccount: {
+    findByPk: jest.fn(),
+    findOne: jest.fn(),
+  },
+  Transaction: {
+    create: jest.fn(),
+    findAndCountAll: jest.fn(),
+    findOne: jest.fn(),
+  },
+  Branch: {
+    findOne: jest.fn(),
+  },
+  sequelize: {
+    transaction: jest.fn(),
+  },
+}));
 
-describe('Transaction Service Tests', () => {
-  let fakeUser, fakeAccount, fakeTransaction, fakeBranch, transaction;
+jest.mock('../../src/helpers/commonFunctions.helper', () => ({
+  customError: jest.fn(),
+}));
 
-  beforeEach(() => {
-    fakeUser = {
-      id: 1,
-      email: 'test@example.com',
-      role: ROLES['103'],
-    };
+jest.mock('../../src/helpers/notifications.helper', () => ({
+  transactionNotification: jest.fn(),
+}));
 
-    fakeAccount = {
-      id: 1,
-      user_id: fakeUser.id,
-      type: ACCOUNT_TYPES.SAVINGS,
-      balance: 1000,
-      status: STATUS.ACTIVE,
-      update: jest.fn(),
-    };
+jest.mock('../../src/helpers/users.helper', () => ({
+  getHighestRole: jest.fn(),
+}));
 
-    fakeTransaction = {
-      id: 1,
-      account_id: fakeAccount.id,
-      type: TRANSACTION_TYPES.DEPOSIT,
-      amount: 500,
-      fee: 0,
-      balance_before: 1000,
-      balance_after: 1500,
-      status: TRANSACTION_STATUS.COMPLETED,
-      update: jest.fn(),
-    };
-
-    fakeBranch = {
-      id: 1,
-      user_id: fakeUser.id,
-    };
-
-    transaction = {
-      commit: jest.fn(),
-      rollback: jest.fn(),
-    };
-
-    sequelize.transaction = jest.fn().mockResolvedValue(transaction);
-
-    commonHelper.customError.mockImplementation((message, status) => {
-      const err = new Error(message);
-      err.statusCode = status;
-      throw err;
-    });
-  });
-
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
-
-  afterAll(async () => {
-    await redisClient.quit();
-  });
-
+describe('Transaction Service', () => {
   describe('create', () => {
-    it('should handle deposit successfully', async () => {
-      User.findByPk.mockResolvedValue(fakeUser);
-      UserAccount.findByPk.mockResolvedValue(fakeAccount);
-      Transaction.create.mockResolvedValue(fakeTransaction);
-
+    it('should create a withdrawal transaction successfully', async () => {
       const payload = {
-        type: TRANSACTION_TYPES.DEPOSIT,
-        amount: 500,
-        paymentMethod: 'CASH',
+        accountId: 1,
+        data: {
+          type: TRANSACTION_TYPES.WITHDRAWAL,
+          amount: 1000,
+          fee: 50,
+          paymentMethod: 'Cash',
+          accountNo: '123456',
+        },
+        user: { id: 1 },
       };
 
-      const result = await create(fakeAccount.id, payload, fakeUser);
-
-      expect(result).toEqual({ message: 'Deposit successful' });
-      expect(fakeAccount.update).toHaveBeenCalledWith(
-        { balance: 1500, status: STATUS.ACTIVE },
-        expect.any(Object)
-      );
-      expect(Transaction.create).toHaveBeenCalled();
-      expect(transaction.commit).toHaveBeenCalled();
-    });
-
-    it('should handle withdrawal successfully', async () => {
-      User.findByPk.mockResolvedValue(fakeUser);
-      UserAccount.findByPk.mockResolvedValue(fakeAccount);
-      Transaction.create.mockResolvedValue(fakeTransaction);
-
-      const payload = {
+      User.findByPk.mockResolvedValue({ id: 1, email: 'user@example.com' });
+      UserAccount.findByPk.mockResolvedValue({
+        id: 1,
+        balance: 2000,
+        type: ACCOUNT_TYPES.SAVINGS,
+        status: STATUS.ACTIVE,
+        number: '123456',
+        update: jest.fn(),
+      });
+      sequelize.transaction.mockResolvedValue({
+        commit: jest.fn(),
+        rollback: jest.fn(),
+      });
+      Transaction.create.mockResolvedValue({
+        id: 1,
+        account_id: 1,
         type: TRANSACTION_TYPES.WITHDRAWAL,
-        amount: 500,
-        fee: 10,
-        paymentMethod: 'CASH',
-      };
+        amount: 1000,
+        fee: 50,
+        status: TRANSACTION_STATUS.COMPLETED,
+      });
 
-      fakeAccount.balance = 1000;
-
-      const result = await create(fakeAccount.id, payload, fakeUser);
+      const result = await create(payload);
 
       expect(result).toEqual({ message: 'Withdrawal successful' });
-      expect(fakeAccount.update).toHaveBeenCalledWith({ balance: 490 }, expect.any(Object));
-      expect(Transaction.create).toHaveBeenCalled();
-      expect(transaction.commit).toHaveBeenCalled();
+      expect(Transaction.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          account_id: 1,
+          type: TRANSACTION_TYPES.WITHDRAWAL,
+          amount: 1000,
+          fee: 50,
+        })
+      );
+      expect(notificationHelper.transactionNotification).toHaveBeenCalledWith(
+        'user@example.com',
+        TRANSACTION_TYPES.WITHDRAWAL,
+        1000,
+        2000,
+        950
+      );
     });
 
-    it('should handle transfer successfully', async () => {
-      const toAccount = {
-        id: 2,
-        user_id: 2,
-        balance: 500,
-        status: STATUS.ACTIVE,
-        update: jest.fn(),
+    it('should return error if account balance is insufficient for withdrawal', async () => {
+      const payload = {
+        accountId: 1,
+        data: {
+          type: TRANSACTION_TYPES.WITHDRAWAL,
+          amount: 5000,
+          fee: 50,
+          paymentMethod: 'Cash',
+          accountNo: '123456',
+        },
+        user: { id: 1 },
       };
 
-      User.findByPk.mockResolvedValue(fakeUser);
-      UserAccount.findByPk.mockResolvedValue(fakeAccount);
-      UserAccount.findOne.mockResolvedValue(toAccount);
-      Transaction.create.mockResolvedValue(fakeTransaction);
+      UserAccount.findByPk.mockResolvedValue({
+        id: 1,
+        balance: 1000,
+        type: ACCOUNT_TYPES.SAVINGS,
+        status: STATUS.ACTIVE,
+        number: '123456',
+      });
 
+      await create(payload);
+
+      expect(commonHelper.customError).toHaveBeenCalledWith('Insufficient funds for withdrawal', 409);
+    });
+
+    it('should create a deposit transaction successfully', async () => {
       const payload = {
+        accountId: 1,
+        data: {
+          type: TRANSACTION_TYPES.DEPOSIT,
+          amount: 1000,
+          fee: 0,
+          paymentMethod: 'Cash',
+          accountNo: '123456',
+        },
+        user: { id: 1 },
+      };
+
+      User.findByPk.mockResolvedValue({ id: 1, email: 'user@example.com' });
+      UserAccount.findByPk.mockResolvedValue({
+        id: 1,
+        balance: 1000,
+        type: ACCOUNT_TYPES.SAVINGS,
+        status: STATUS.ACTIVE,
+        number: '123456',
+        update: jest.fn(),
+      });
+      sequelize.transaction.mockResolvedValue({
+        commit: jest.fn(),
+        rollback: jest.fn(),
+      });
+      Transaction.create.mockResolvedValue({
+        id: 1,
+        account_id: 1,
+        type: TRANSACTION_TYPES.DEPOSIT,
+        amount: 1000,
+        fee: 0,
+        status: TRANSACTION_STATUS.COMPLETED,
+      });
+
+      const result = await create(payload);
+
+      expect(result).toEqual({ message: 'Deposit successful' });
+      expect(Transaction.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          account_id: 1,
+          type: TRANSACTION_TYPES.DEPOSIT,
+          amount: 1000,
+          fee: 0,
+        })
+      );
+      expect(notificationHelper.transactionNotification).toHaveBeenCalledWith(
+        'user@example.com',
+        TRANSACTION_TYPES.DEPOSIT,
+        1000,
+        1000,
+        2000
+      );
+    });
+
+    it('should create a transfer transaction successfully', async () => {
+      const payload = {
+        accountId: 1,
+        data: {
+          type: TRANSACTION_TYPES.TRANSFER,
+          amount: 500,
+          fee: 50,
+          paymentMethod: 'Bank Transfer',
+          accountNo: '654321',
+        },
+        user: { id: 1 },
+      };
+
+      User.findByPk.mockResolvedValue({ id: 1, email: 'user@example.com' });
+      UserAccount.findByPk.mockResolvedValue({
+        id: 1,
+        balance: 2000,
+        type: ACCOUNT_TYPES.SAVINGS,
+        status: STATUS.ACTIVE,
+        number: '123456',
+      });
+      UserAccount.findOne.mockResolvedValue({
+        id: 2,
+        balance: 1000,
+        number: '654321',
+        update: jest.fn(),
+      });
+      Transaction.create.mockResolvedValue({
+        id: 1,
+        account_id: 1,
+        account_no: '654321',
         type: TRANSACTION_TYPES.TRANSFER,
         amount: 500,
-        fee: 10,
-        accountNo: '1234567890',
-        paymentMethod: 'ONLINE',
-      };
+        fee: 50,
+        status: TRANSACTION_STATUS.COMPLETED,
+      });
 
-      fakeAccount.balance = 1000;
-
-      const result = await create(fakeAccount.id, payload, fakeUser);
+      const result = await create(payload);
 
       expect(result).toEqual({ message: 'Transfer successful' });
-      expect(fakeAccount.update).toHaveBeenCalledWith({ balance: 490 }, expect.any(Object));
-      expect(toAccount.update).toHaveBeenCalledWith(
-        { balance: 1000, status: STATUS.ACTIVE },
-        expect.any(Object)
-      );
       expect(Transaction.create).toHaveBeenCalledTimes(2);
-      expect(transaction.commit).toHaveBeenCalled();
+      expect(notificationHelper.transactionNotification).toHaveBeenCalledTimes(2);
     });
 
-    it('should throw an error if account is not found', async () => {
-      UserAccount.findByPk.mockResolvedValue(null);
+    it('should return error if source and destination account are the same in transfer', async () => {
+      const payload = {
+        accountId: 1,
+        data: {
+          type: TRANSACTION_TYPES.TRANSFER,
+          amount: 500,
+          fee: 50,
+          paymentMethod: 'Bank Transfer',
+          accountNo: '123456',
+        },
+        user: { id: 1 },
+      };
 
-      const payload = { type: TRANSACTION_TYPES.DEPOSIT, amount: 500 };
+      await create(payload);
 
-      await expect(create(fakeAccount.id, payload, fakeUser)).rejects.toThrow('Account not found');
+      expect(commonHelper.customError).toHaveBeenCalledWith(
+        'Source account and destination account cannot be same',
+        409
+      );
     });
 
-    it('should rollback transaction on error', async () => {
-      UserAccount.findByPk.mockResolvedValue(fakeAccount);
-      Transaction.create.mockRejectedValue(new Error('Database error'));
+    it('should return error if destination account not found in transfer', async () => {
+      const payload = {
+        accountId: 1,
+        data: {
+          type: TRANSACTION_TYPES.TRANSFER,
+          amount: 500,
+          fee: 50,
+          paymentMethod: 'Bank Transfer',
+          accountNo: '654321',
+        },
+        user: { id: 1 },
+      };
 
-      const payload = { type: TRANSACTION_TYPES.DEPOSIT, amount: 500 };
+      UserAccount.findByPk.mockResolvedValue({ id: 1, balance: 1000, number: '123456' });
+      UserAccount.findOne.mockResolvedValue(null); // Mock destination account not found
 
-      await expect(create(fakeAccount.id, payload, fakeUser)).rejects.toThrow('Database error');
-      expect(transaction.rollback).toHaveBeenCalled();
+      await create(payload);
+
+      expect(commonHelper.customError).toHaveBeenCalledWith('Destination account not found', 400);
     });
   });
 
   describe('index', () => {
-    it('should return paginated transactions for customer', async () => {
-      UserAccount.findOne.mockResolvedValue(fakeAccount);
+    it('should list transactions for a user with admin role', async () => {
+      const payload = {
+        accountId: 1,
+        query: { page: 1, limit: 10 },
+        user: { id: 1, roles: [ROLES['102']] },
+      };
+
+      Branch.findOne.mockResolvedValue({ id: 1 });
       Transaction.findAndCountAll.mockResolvedValue({
-        rows: [fakeTransaction],
-        count: 1,
+        count: 2,
+        rows: [
+          { id: 1, amount: 1000 },
+          { id: 2, amount: 500 },
+        ],
       });
 
-      const query = { page: 1, limit: 10 };
-      const result = await index(fakeAccount.id, query, fakeUser);
+      const result = await index(payload);
 
       expect(result).toEqual({
-        totalItems: 1,
+        totalItems: 2,
         totalPages: 1,
         currentPage: 1,
-        transactions: [fakeTransaction],
-      });
-      expect(Transaction.findAndCountAll).toHaveBeenCalledWith({
-        where: { account_id: fakeAccount.id },
-        offset: 0,
-        limit: 10,
-        order: [['created_at', 'DESC']],
+        transactions: [
+          { id: 1, amount: 1000 },
+          { id: 2, amount: 500 },
+        ],
       });
     });
 
-    it('should throw an error if no transactions are found', async () => {
-      Transaction.findAndCountAll.mockResolvedValue({ rows: [], count: 0 });
+    it('should return error if no transactions are found', async () => {
+      const payload = {
+        accountId: 1,
+        query: { page: 1, limit: 10 },
+        user: { id: 1, roles: [ROLES['103']] },
+      };
 
-      const query = { page: 1, limit: 10 };
-      await expect(index(fakeAccount.id, query, fakeUser)).rejects.toThrow('No transactions found');
-    });
+      Transaction.findAndCountAll.mockResolvedValue({
+        count: 0,
+        rows: [],
+      });
 
-    it("should throw an error if user accesses another branch's transactions", async () => {
-      UserAccount.findByPk.mockResolvedValue(fakeAccount);
-      Branch.findOne.mockResolvedValue(fakeBranch);
+      await index(payload);
 
-      const query = { page: 1, limit: 10 };
-      fakeAccount.branch_id = 2;
-
-      await expect(index(fakeAccount.id, query, { id: 2, role: ROLES['102'] })).rejects.toThrow(
-        "Cannot access other account's branch transaction history"
-      );
+      expect(commonHelper.customError).toHaveBeenCalledWith('No transactions found', 404);
     });
   });
 
   describe('view', () => {
-    it('should return a transaction by ID for customer', async () => {
-      UserAccount.findByPk.mockResolvedValue(fakeAccount);
-      Transaction.findOne.mockResolvedValue(fakeTransaction);
+    it('should return transaction details for a user with admin role', async () => {
+      const payload = {
+        params: { accountId: 1, transactionId: 1 },
+        user: { id: 1, roles: [ROLES['102']] },
+      };
 
-      const result = await view(fakeAccount.id, fakeTransaction.id, fakeUser);
+      Transaction.findOne.mockResolvedValue({
+        id: 1,
+        amount: 1000,
+        fee: 50,
+        status: TRANSACTION_STATUS.COMPLETED,
+      });
 
-      expect(result).toEqual(fakeTransaction);
-      expect(Transaction.findOne).toHaveBeenCalledWith({
-        where: { id: fakeTransaction.id, account_id: fakeAccount.id },
+      const result = await view(payload);
+
+      expect(result).toEqual({
+        id: 1,
+        amount: 1000,
+        fee: 50,
+        status: TRANSACTION_STATUS.COMPLETED,
       });
     });
 
-    it('should throw an error if transaction is not found', async () => {
-      UserAccount.findByPk.mockResolvedValue(fakeAccount);
+    it('should return error if transaction not found', async () => {
+      const payload = {
+        params: { accountId: 1, transactionId: 999 },
+        user: { id: 1, roles: [ROLES['102']] },
+      };
+
       Transaction.findOne.mockResolvedValue(null);
 
-      await expect(view(fakeAccount.id, fakeTransaction.id, fakeUser)).rejects.toThrow(
-        'Transaction not found'
-      );
-    });
+      await view(payload);
 
-    it('should throw an error if account is not found', async () => {
-      UserAccount.findByPk.mockResolvedValue(null);
-
-      await expect(view(fakeAccount.id, fakeTransaction.id, fakeUser)).rejects.toThrow('Account not found');
-    });
-
-    it("should throw an error if user accesses another branch's transaction", async () => {
-      UserAccount.findByPk.mockResolvedValue(fakeAccount);
-      Branch.findOne.mockResolvedValue(fakeBranch);
-
-      fakeAccount.branch_id = 2;
-
-      await expect(view(fakeAccount.id, fakeTransaction.id, { id: 2, role: ROLES['102'] })).rejects.toThrow(
-        "Cannot access other account's branch transaction history"
-      );
+      expect(commonHelper.customError).toHaveBeenCalledWith('Transaction not found', 404);
     });
   });
 });

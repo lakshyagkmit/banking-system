@@ -47,7 +47,7 @@ describe('Deposit Controller', () => {
 
       expect(res.data).toEqual(req.body);
       expect(res.statusCode).toBe(201);
-      expect(depositService.create).toHaveBeenCalledWith(req.body, req.user);
+      expect(depositService.create).toHaveBeenCalledWith({ data: req.body, user: req.user });
       expect(next).toHaveBeenCalled();
     });
 
@@ -57,7 +57,9 @@ describe('Deposit Controller', () => {
       const next = jest.fn();
       const err = new Error('Error creating deposit');
       err.statusCode = 400;
+
       depositService.create.mockRejectedValue(err);
+
       await depositController.create(req, res, next);
 
       expect(commonHelper.customErrorHandler).toHaveBeenCalledWith(
@@ -80,7 +82,7 @@ describe('Deposit Controller', () => {
       const res = {};
       const next = jest.fn();
 
-      const err = new Error('error creating deposit account');
+      const err = new Error('Error creating deposit account');
       err.statusCode = 400;
       depositService.create.mockRejectedValue(err);
 
@@ -89,7 +91,7 @@ describe('Deposit Controller', () => {
       expect(commonHelper.customErrorHandler).toHaveBeenCalledWith(
         req,
         res,
-        'error creating deposit account',
+        'Error creating deposit account',
         400,
         err
       );

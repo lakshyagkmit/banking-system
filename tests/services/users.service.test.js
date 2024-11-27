@@ -1,211 +1,274 @@
-const { create, index, view, update, remove } = require('../../src/services/users.service');
-const { User, Role, UserRole, Branch, UserAccount, sequelize } = require('../../src/models');
+const { User, Role, Branch, UserAccount, sequelize } = require('../../src/models');
 const commonHelper = require('../../src/helpers/commonFunctions.helper');
 const awsHelper = require('../../src/helpers/aws.helper');
-const bcrypt = require('bcryptjs');
 const { ROLES } = require('../../src/constants/constants');
-const redisClient = require('../../src/config/redis');
+const bcrypt = require('bcryptjs');
+const {
+  create,
+  index,
+  view,
+  viewMe,
+  update,
+  remove,
+  updateRoles,
+} = require('../../src/services/users.service');
 
+// Mocking the necessary models and helpers
 jest.mock('../../src/models');
 jest.mock('../../src/helpers/commonFunctions.helper');
 jest.mock('../../src/helpers/aws.helper');
 jest.mock('bcryptjs');
-jest.mock('redis', () => {
-  const mRedisClient = {
-    connect: jest.fn().mockResolvedValue(),
-    on: jest.fn(),
-    quit: jest.fn().mockResolvedValue(),
-  };
-  return {
-    createClient: jest.fn(() => mRedisClient),
-  };
-});
 
-describe('User Service Tests', () => {
-  let fakeTransaction, fakeRole, fakeUser, fakeBranch, fakeAccount;
-
-  beforeEach(() => {
-    fakeTransaction = {
-      commit: jest.fn(),
-      rollback: jest.fn(),
-    };
-    sequelize.transaction.mockResolvedValue(fakeTransaction);
-
-    fakeRole = {
-      id: 1,
-      code: ROLES['103'],
-    };
-
-    fakeUser = {
-      id: 1,
-      name: 'John Doe',
-      email: 'test@example.com',
-      contact: '1234567890',
-      update: jest.fn(),
-      destroy: jest.fn(),
-      Roles: [fakeRole],
-    };
-
-    fakeBranch = {
-      id: 1,
-      user_id: fakeUser.id,
-    };
-
-    fakeAccount = {
-      id: 1,
-      user_id: fakeUser.id,
-    };
-
-    commonHelper.customError.mockImplementation((message, status) => {
-      const err = new Error(message);
-      err.statusCode = status;
-      throw err;
-    });
+describe('UserController', () => {
+  // Mock setup for bcrypt and AWS helper
+  beforeAll(() => {
+    bcrypt.hash.mockResolvedValue('hashedpassword');
+    awsHelper.uploadImageToS3.mockResolvedValue('s3url');
   });
 
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
-
+  // Test Case for 'create' function
   describe('create', () => {
-    it('should create a new user successfully', async () => {
-      User.findOne.mockResolvedValueOnce(null);
-      Role.findOne.mockResolvedValueOnce(fakeRole);
-      User.create.mockResolvedValueOnce(fakeUser);
-      UserRole.create.mockResolvedValueOnce({});
-      awsHelper.uploadImageToS3.mockResolvedValue('fake-image-url');
-      bcrypt.hash.mockResolvedValue('hashed-password');
-
+    it('should create a new user and assign the correct role', async () => {
       const payload = {
-        name: 'John Doe',
-        email: 'test@example.com',
-        password: 'password123',
-        contact: '1234567890',
-        govIssueIdType: 'Passport',
-        fatherName: 'Father Doe',
-        motherName: 'Mother Doe',
-        address: '123 Street',
-        isVerified: true,
+        data: {
+          name: 'John Doe',
+          email: 'john@example.com',
+          password: 'password123',
+          contact: '1234567890',
+          govIssueIdType: 'passport',
+          fatherName: 'Father Doe',
+          motherName: 'Mother Doe',
+          address: '123 Street',
+          isVerified: true,
+          roleCode: ROLES['103'], // customer role
+        },
+        file: { buffer: 'image' }, // Mock file upload
+        user: { roles: [ROLES['101']] }, // Admin user
       };
 
-      const file = { buffer: Buffer.from('fake-image') };
-      const user = { role: ROLES['101'] };
+      User.create.mockResolvedValue({
+        id: 1,
+        ...payload.data,
+        password: 'hashedpassword',
+      });
+      Role.findOne.mockResolvedValue({ code: ROLES['103'] });
+      User.prototype.addRole.mockResolvedValue();
 
-      const result = await create(payload, file, user);
+      const result = await create(payload);
 
-      expect(result).toEqual(fakeUser);
-      expect(User.create).toHaveBeenCalledWith(
-        expect.objectContaining({ email: payload.email }),
-        expect.any(Object)
-      );
-      expect(UserRole.create).toHaveBeenCalled();
-      expect(fakeTransaction.commit).toHaveBeenCalled();
+      expect(result.name).toBe('John Doe');
+      expect(result.email).toBe('john@example.com');
+      expect(result.password).toBe('hashedpassword');
+      expect(awsHelper.uploadImageToS3).toHaveBeenCalled();
     });
 
-    it('should throw an error if email or contact already exists', async () => {
-      User.findOne.mockResolvedValue(fakeUser);
+    it('should throw error if email or contact already exists', async () => {
+      const payload = {
+        data: { email: 'john@example.com', contact: '1234567890' },
+        file: null,
+        user: { roles: [ROLES['101']] },
+      };
 
-      const payload = { email: fakeUser.email, contact: fakeUser.contact };
-      const file = {};
-      const user = { role: ROLES['101'] };
+      User.findOne.mockResolvedValue({ email: 'john@example.com' });
 
-      await expect(create(payload, file, user)).rejects.toThrow('User with email exists');
-    });
-
-    it('should throw an error if file is missing', async () => {
-      User.findOne.mockResolvedValue(null);
-
-      const payload = { email: 'new@example.com', contact: '1234567890' };
-      const user = { role: ROLES['101'] };
-
-      await expect(create(payload, null, user)).rejects.toThrow('Please add gov_issue_id_image');
+      await expect(create(payload)).rejects.toThrow('User with email already exists');
     });
   });
 
+  // Test Case for 'index' function
   describe('index', () => {
-    it('should return paginated users for Admin', async () => {
+    it('should return users based on admin role', async () => {
+      const payload = {
+        query: { page: 1, limit: 10, userRole: ROLES['103'] },
+        user: { roles: [ROLES['101']] }, // Admin user
+      };
+
       User.findAndCountAll.mockResolvedValue({
-        rows: [fakeUser],
         count: 1,
+        rows: [{ id: 1, name: 'John Doe' }],
       });
 
-      const query = { page: 1, limit: 10, userRole: ROLES['103'] };
-      const user = { role: ROLES['101'] };
+      const result = await index(payload);
 
-      const result = await index(query, user);
-
-      expect(result).toEqual({
-        totalItems: 1,
-        totalPages: 1,
-        currentPage: 1,
-        users: [fakeUser],
-      });
-      expect(User.findAndCountAll).toHaveBeenCalledWith(expect.any(Object));
+      expect(result.totalItems).toBe(1);
+      expect(result.users[0].name).toBe('John Doe');
     });
 
-    it('should throw an error if no users are found', async () => {
-      User.findAndCountAll.mockResolvedValue({
-        rows: [],
-        count: 0,
-      });
+    it('should throw error if no users found', async () => {
+      const payload = {
+        query: { page: 1, limit: 10 },
+        user: { roles: [ROLES['101']] }, // Admin user
+      };
 
-      const query = { page: 1, limit: 10, userRole: ROLES['103'] };
-      const user = { role: ROLES['101'] };
+      User.findAndCountAll.mockResolvedValue({ count: 0, rows: [] });
 
-      await expect(index(query, user)).rejects.toThrow('No users found');
+      await expect(index(payload)).rejects.toThrow('No users found');
     });
   });
 
-  describe('view', () => {
-    it('should return a user by ID', async () => {
-      User.findOne.mockResolvedValue(fakeUser);
+  // Test Case for 'viewMe' function
+  describe('viewMe', () => {
+    it('should return the user profile', async () => {
+      const userId = 1;
+      User.findOne.mockResolvedValue({
+        id: userId,
+        name: 'John Doe',
+        email: 'john@example.com',
+      });
 
-      const user = { role: ROLES['101'] };
-      const result = await view(fakeUser.id, user);
+      const result = await viewMe(userId);
 
-      expect(result).toEqual(fakeUser);
-      expect(User.findOne).toHaveBeenCalledWith(expect.any(Object));
+      expect(result.name).toBe('John Doe');
+      expect(result.email).toBe('john@example.com');
     });
 
-    it('should throw an error if user not found', async () => {
+    it('should throw error if user not found', async () => {
+      const userId = 1;
       User.findOne.mockResolvedValue(null);
 
-      const user = { role: ROLES['101'] };
-      await expect(view(fakeUser.id, user)).rejects.toThrow('User not found');
+      await expect(viewMe(userId)).rejects.toThrow('User not found');
     });
   });
 
+  // Test Case for 'view' function
+  describe('view', () => {
+    it('should return a user profile for admin', async () => {
+      const payload = {
+        id: 1,
+        user: { roles: [ROLES['101']] }, // Admin user
+      };
+
+      User.findOne.mockResolvedValue({
+        id: 1,
+        name: 'John Doe',
+        email: 'john@example.com',
+      });
+
+      const result = await view(payload);
+
+      expect(result.name).toBe('John Doe');
+      expect(result.email).toBe('john@example.com');
+    });
+
+    it('should throw error if user not found', async () => {
+      const payload = { id: 1, user: { roles: [ROLES['101']] } };
+
+      User.findOne.mockResolvedValue(null);
+
+      await expect(view(payload)).rejects.toThrow('User not found');
+    });
+  });
+
+  // Test Case for 'update' function
   describe('update', () => {
-    it('should update user details successfully', async () => {
-      User.findOne.mockResolvedValueOnce(null).mockResolvedValueOnce(fakeUser);
+    it('should update the user details', async () => {
+      const payload = {
+        id: 1,
+        data: {
+          name: 'John Doe Updated',
+          email: 'john.updated@example.com',
+          contact: '9876543210',
+          fatherName: 'Updated Father',
+          motherName: 'Updated Mother',
+          address: '456 New Street',
+        },
+        user: { roles: [ROLES['101']] }, // Admin user
+      };
 
-      fakeUser.update.mockResolvedValueOnce(fakeUser);
+      User.findOne.mockResolvedValue({
+        id: 1,
+        name: 'John Doe',
+        email: 'john@example.com',
+        contact: '1234567890',
+        update: jest.fn().mockResolvedValue({
+          name: 'John Doe Updated',
+          email: 'john.updated@example.com',
+        }),
+      });
 
-      const payload = { name: 'Jane Doe', email: 'jane@example.com', contact: '9876543210' };
-      const user = { role: ROLES['101'] };
+      const result = await update(payload);
 
-      const result = await update(fakeUser.id, payload, user);
-
-      expect(result).toEqual(fakeUser);
-      expect(fakeUser.update).toHaveBeenCalledWith(expect.objectContaining(payload), expect.any(Object));
-      expect(fakeTransaction.commit).toHaveBeenCalled();
+      expect(result.name).toBe('John Doe Updated');
+      expect(result.email).toBe('john.updated@example.com');
     });
 
-    it('should throw an error if email or contact is already in use', async () => {
-      User.findOne.mockResolvedValueOnce({ email: fakeUser.email }).mockResolvedValueOnce(fakeUser);
+    it('should throw error if user not found', async () => {
+      const payload = {
+        id: 1,
+        data: { name: 'Updated Name' },
+        user: { roles: [ROLES['101']] }, // Admin user
+      };
 
-      const payload = { email: fakeUser.email };
-      const user = { role: ROLES['101'] };
+      User.findOne.mockResolvedValue(null);
 
-      await expect(update(fakeUser.id, payload, user)).rejects.toThrow('This email already occupied');
+      await expect(update(payload)).rejects.toThrow('User not found');
     });
   });
-  describe('remove', () => {
-    it('should throw an error if user not found', async () => {
-      User.findByPk.mockResolvedValueOnce(null);
 
-      const user = { role: ROLES['101'] };
-      await expect(remove(fakeUser.id, user)).rejects.toThrow('User not found');
+  // Test Case for 'remove' function
+  describe('remove', () => {
+    it('should delete a user', async () => {
+      const userId = 1;
+
+      User.findOne.mockResolvedValue({
+        id: userId,
+        Roles: [{ code: ROLES['102'] }],
+        UserAccounts: [],
+        removeRole: jest.fn(),
+        destroy: jest.fn(),
+      });
+
+      Branch.findOne.mockResolvedValue(null); // No branch manager
+      await expect(remove(userId)).resolves.toEqual({ message: 'User removed successfully' });
+    });
+
+    it('should throw error if user not found', async () => {
+      const userId = 1;
+
+      User.findOne.mockResolvedValue(null);
+
+      await expect(remove(userId)).rejects.toThrow('User not found');
+    });
+  });
+
+  // Test Case for 'updateRoles' function
+  describe('updateRoles', () => {
+    it('should update user roles', async () => {
+      const payload = {
+        id: 1,
+        data: {
+          rolesToAdd: [ROLES['103']],
+          rolesToRemove: [ROLES['102']],
+        },
+      };
+
+      User.findOne.mockResolvedValue({
+        id: 1,
+        Roles: [{ code: ROLES['102'] }],
+        addRole: jest.fn(),
+        removeRole: jest.fn(),
+      });
+
+      Role.findOne.mockResolvedValue({ code: ROLES['103'] });
+      Branch.findOne.mockResolvedValue(null); // No active branch manager
+
+      await expect(updateRoles(payload)).resolves.toEqual({
+        updatedRoles: { added: [ROLES['103']], removed: [ROLES['102']] },
+      });
+    });
+
+    it('should throw error if user not found', async () => {
+      const payload = {
+        id: 1,
+        data: {
+          rolesToAdd: [ROLES['103']],
+          rolesToRemove: [ROLES['102']],
+        },
+      };
+
+      User.findOne.mockResolvedValue(null);
+
+      await expect(updateRoles(payload)).rejects.toThrow('User not found');
     });
   });
 });

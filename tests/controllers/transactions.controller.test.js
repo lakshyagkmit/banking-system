@@ -49,11 +49,15 @@ describe('Transaction Controller', () => {
 
       expect(res.data).toEqual(req.body);
       expect(res.statusCode).toBe(201);
-      expect(transactionService.create).toHaveBeenCalledWith(req.params.accountId, req.body, req.user);
+      expect(transactionService.create).toHaveBeenCalledWith({
+        accountId: req.params.accountId,
+        data: req.body,
+        user: req.user,
+      });
       expect(next).toHaveBeenCalled();
     });
 
-    it('should handle errors gracefully', async () => {
+    it('should handle errors gracefully when creating a transaction', async () => {
       const req = {
         params: { accountId: faker.string.uuid() },
         body: {},
@@ -102,11 +106,15 @@ describe('Transaction Controller', () => {
 
       expect(res.data).toBeDefined();
       expect(res.statusCode).toBe(200);
-      expect(transactionService.index).toHaveBeenCalledWith(req.params.accountId, req.query, req.user);
+      expect(transactionService.index).toHaveBeenCalledWith({
+        accountId: req.params.accountId,
+        query: req.query,
+        user: req.user,
+      });
       expect(next).toHaveBeenCalled();
     });
 
-    it('should handle errors gracefully', async () => {
+    it('should handle errors gracefully when fetching transactions', async () => {
       const req = {
         params: { accountId: faker.string.uuid() },
         query: {},
@@ -155,15 +163,14 @@ describe('Transaction Controller', () => {
 
       expect(res.data).toBeDefined();
       expect(res.statusCode).toBe(200);
-      expect(transactionService.view).toHaveBeenCalledWith(
-        req.params.accountId,
-        req.params.transactionId,
-        req.user
-      );
+      expect(transactionService.view).toHaveBeenCalledWith({
+        params: req.params,
+        user: req.user,
+      });
       expect(next).toHaveBeenCalled();
     });
 
-    it('should handle errors gracefully', async () => {
+    it('should handle errors gracefully when viewing a transaction', async () => {
       const req = {
         params: { accountId: faker.string.uuid(), transactionId: faker.string.uuid() },
         user: { id: faker.string.uuid() },

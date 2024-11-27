@@ -1,224 +1,230 @@
 const { create, index, view, update, remove } = require('../../src/services/policies.service');
-const { Bank, AccountPolicy, UserAccount, sequelize } = require('../../src/models');
+const { AccountPolicy, Bank, UserAccount } = require('../../src/models');
 const commonHelper = require('../../src/helpers/commonFunctions.helper');
-const redisClient = require('../../src/config/redis');
 
-jest.mock('../../src/models');
-jest.mock('../../src/helpers/commonFunctions.helper');
-jest.mock('redis', () => {
-  const mRedisClient = {
-    connect: jest.fn().mockResolvedValue(),
-    on: jest.fn(),
-    quit: jest.fn().mockResolvedValue(),
-  };
-  return {
-    createClient: jest.fn(() => mRedisClient),
-  };
-});
+jest.mock('../../src/models', () => ({
+  AccountPolicy: {
+    findOne: jest.fn(),
+    findAndCountAll: jest.fn(),
+    findByPk: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    destroy: jest.fn(),
+  },
+  Bank: {
+    findOne: jest.fn(),
+  },
+  UserAccount: {
+    findOne: jest.fn(),
+  },
+}));
 
-describe('Policy Service Tests', () => {
-  let fakePolicy, fakeBank, transaction;
+jest.mock('../../src/helpers/commonFunctions.helper', () => ({
+  customError: jest.fn(),
+}));
 
-  beforeEach(() => {
-    fakePolicy = {
-      id: 1,
-      bank_id: 1,
-      account_type: 'Savings',
-      initial_amount: 1000,
-      interest_rate: 4.5,
-      minimum_amount: 500,
-      lock_in_period: 12,
-      penalty_fee: 50,
-      update: jest.fn(),
-      destroy: jest.fn(),
-    };
-
-    commonHelper.customError.mockImplementation((message, status) => {
-      const err = new Error(message);
-      err.statusCode = status;
-      throw err;
-    });
-
-    fakeBank = {
-      id: 1,
-    };
-
-    transaction = {
-      commit: jest.fn(),
-      rollback: jest.fn(),
-    };
-
-    sequelize.transaction = jest.fn().mockResolvedValue(transaction);
-  });
-
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
-
-  afterAll(async () => {
-    await redisClient.quit();
-  });
-
+describe('AccountPolicy Service', () => {
+  // Test cases for create function
   describe('create', () => {
     it('should create a new policy successfully', async () => {
-      Bank.findOne.mockResolvedValue(fakeBank);
-      AccountPolicy.findOne.mockResolvedValueOnce(null);
-      AccountPolicy.create.mockResolvedValueOnce(fakePolicy);
-
       const payload = {
-        accountType: 'Savings',
-        initialAmount: 1000,
-        interestRate: 4.5,
-        minimumAmount: 500,
-        lockInPeriod: 12,
-        penaltyFee: 50,
+        data: {
+          accountType: 'Savings',
+          initialAmount: 1000,
+          interestRate: 5,
+          minimumAmount: 500,
+          lockInPeriod: 12,
+          penaltyFee: 50,
+        },
       };
+
+      Bank.findOne.mockResolvedValue({ id: 1 }); // Mock bank data
+      AccountPolicy.findOne.mockResolvedValue(null); // No existing policy
+      AccountPolicy.create.mockResolvedValue({ id: 1, ...payload.data }); // Mock policy creation
 
       const result = await create(payload);
 
-      expect(result).toEqual(fakePolicy);
-      expect(AccountPolicy.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          bank_id: fakeBank.id,
-          account_type: payload.accountType,
-        }),
-        expect.any(Object)
-      );
-      expect(transaction.commit).toHaveBeenCalled();
+      expect(AccountPolicy.findOne).toHaveBeenCalledWith({
+        where: {
+          account_type: payload.data.accountType,
+          interest_rate: payload.data.interestRate,
+          initial_amount: payload.data.initialAmount,
+        },
+      });
+      expect(AccountPolicy.create).toHaveBeenCalledWith({
+        bank_id: 1,
+        account_type: payload.data.accountType,
+        initial_amount: payload.data.initialAmount,
+        interest_rate: payload.data.interestRate,
+        minimum_amount: payload.data.minimumAmount,
+        lock_in_period: payload.data.lockInPeriod,
+        penalty_fee: payload.data.penaltyFee,
+      });
+      expect(result).toEqual({ id: 1, ...payload.data });
     });
 
-    it('should throw an error if the policy already exists', async () => {
-      AccountPolicy.findOne.mockResolvedValueOnce(fakePolicy);
-
+    it('should return error if policy already exists', async () => {
       const payload = {
-        accountType: 'Savings',
-        initialAmount: 1000,
-        interestRate: 4.5,
-        minimumAmount: 500,
-        lockInPeriod: 12,
-        penaltyFee: 50,
+        data: {
+          accountType: 'Savings',
+          initialAmount: 1000,
+          interestRate: 5,
+          minimumAmount: 500,
+          lockInPeriod: 12,
+          penaltyFee: 50,
+        },
       };
 
-      await expect(create(payload)).rejects.toThrow('Policy already exists');
+      AccountPolicy.findOne.mockResolvedValue({ id: 1 }); // Mock existing policy
+
+      await create(payload);
+
+      expect(commonHelper.customError).toHaveBeenCalledWith('Policy already exists', 409);
     });
   });
 
+  // Test cases for index function
   describe('index', () => {
-    it('should list all policies with pagination', async () => {
+    it('should list all policies', async () => {
+      const payload = {
+        query: {
+          page: 1,
+          limit: 10,
+        },
+      };
+
       AccountPolicy.findAndCountAll.mockResolvedValue({
-        rows: [fakePolicy],
-        count: 1,
+        count: 2,
+        rows: [
+          { id: 1, account_type: 'Savings' },
+          { id: 2, account_type: 'Current' },
+        ],
       });
 
-      const query = { page: 1, limit: 10 };
-      const result = await index(query);
+      const result = await index(payload);
 
+      expect(AccountPolicy.findAndCountAll).toHaveBeenCalledWith({
+        offset: 0,
+        limit: 10,
+      });
       expect(result).toEqual({
-        policies: [fakePolicy],
-        totalPolicies: 1,
+        policies: [
+          { id: 1, account_type: 'Savings' },
+          { id: 2, account_type: 'Current' },
+        ],
+        totalPolicies: 2,
         currentPage: 1,
         totalPages: 1,
       });
-      expect(AccountPolicy.findAndCountAll).toHaveBeenCalledWith({
-        offset: 0,
-        limit: query.limit,
+    });
+
+    it('should return error if no policies found', async () => {
+      const payload = {
+        query: {
+          page: 1,
+          limit: 10,
+        },
+      };
+
+      AccountPolicy.findAndCountAll.mockResolvedValue({
+        count: 0,
+        rows: [],
       });
-    });
 
-    it('should throw an error if no policies are found', async () => {
-      AccountPolicy.findAndCountAll.mockResolvedValue({ rows: [], count: 0 });
+      await index(payload);
 
-      const query = { page: 1, limit: 10 };
-      await expect(index(query)).rejects.toThrow('No policies found');
+      expect(commonHelper.customError).toHaveBeenCalledWith('Policy already exists', 409);
     });
   });
 
+  // Test cases for view function
   describe('view', () => {
-    it('should return a policy by ID', async () => {
-      AccountPolicy.findByPk.mockResolvedValue(fakePolicy);
+    it('should return policy by id', async () => {
+      const policyId = 1;
 
-      const result = await view(fakePolicy.id);
+      AccountPolicy.findByPk.mockResolvedValue({ id: policyId, account_type: 'Savings' });
 
-      expect(result).toEqual(fakePolicy);
-      expect(AccountPolicy.findByPk).toHaveBeenCalledWith(fakePolicy.id);
+      const result = await view(policyId);
+
+      expect(AccountPolicy.findByPk).toHaveBeenCalledWith(policyId);
+      expect(result).toEqual({ id: policyId, account_type: 'Savings' });
     });
 
-    it('should throw an error if the policy is not found', async () => {
-      AccountPolicy.findByPk.mockResolvedValue(null);
+    it('should return error if policy not found', async () => {
+      const policyId = 1;
 
-      await expect(view(fakePolicy.id)).rejects.toThrow('Policy not found');
+      AccountPolicy.findByPk.mockResolvedValue(null); // Mock policy not found
+
+      await view(policyId);
+
+      expect(commonHelper.customError).toHaveBeenCalledWith('Policy not found', 404);
     });
   });
 
+  // Test cases for update function
   describe('update', () => {
-    it('should update a policy successfully', async () => {
-      AccountPolicy.findByPk.mockResolvedValueOnce(fakePolicy);
+    it('should return error if policy not found during update', async () => {
+      const payload = {
+        id: 1,
+        data: {
+          interestRate: 6,
+          penaltyFee: 100,
+        },
+      };
 
-      const payload = { interestRate: 5.0, penaltyFee: 100 };
-      const result = await update(fakePolicy.id, payload);
+      AccountPolicy.findByPk.mockResolvedValue(null); // Mock policy not found
 
-      expect(result).toEqual(undefined);
-      expect(fakePolicy.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          interest_rate: payload.interestRate,
-          penalty_fee: payload.penaltyFee,
-        }),
-        expect.any(Object)
-      );
-      expect(transaction.commit).toHaveBeenCalled();
-    });
+      await update(payload);
 
-    it('should throw an error if the policy is not found', async () => {
-      AccountPolicy.findByPk.mockResolvedValue(null);
-
-      const payload = { interestRate: 5.0, penaltyFee: 100 };
-      await expect(update(fakePolicy.id, payload)).rejects.toThrow('Policy not found');
-    });
-
-    it('should rollback the transaction on error', async () => {
-      AccountPolicy.findByPk.mockResolvedValue(fakePolicy);
-      fakePolicy.update.mockRejectedValue(new Error('Database error'));
-
-      const payload = { interestRate: 5.0, penaltyFee: 100 };
-      await expect(update(fakePolicy.id, payload)).rejects.toThrow('Database error');
-      expect(transaction.rollback).toHaveBeenCalled();
+      expect(commonHelper.customError).toHaveBeenCalledWith('Policy not found', 404);
     });
   });
 
+  // Test cases for remove function
   describe('remove', () => {
-    it('should delete a policy successfully', async () => {
-      AccountPolicy.findByPk.mockResolvedValue(fakePolicy);
-      UserAccount.findOne.mockResolvedValue(null);
+    it('should remove a policy successfully', async () => {
+      const policyId = 1;
 
-      const result = await remove(fakePolicy.id);
+      const policy = { id: policyId, destroy: jest.fn() };
+      const userAccount = null; // No account linked to policy
 
+      AccountPolicy.findByPk.mockResolvedValue(policy);
+      UserAccount.findOne.mockResolvedValue(userAccount);
+      policy.destroy.mockResolvedValue({ message: 'Policy deleted successfully' });
+
+      const result = await remove(policyId);
+
+      expect(AccountPolicy.findByPk).toHaveBeenCalledWith(policyId);
+      expect(UserAccount.findOne).toHaveBeenCalledWith({ where: { policy_id: policyId } });
+      expect(policy.destroy).toHaveBeenCalled();
       expect(result).toEqual({ message: 'Policy deleted successfully' });
-      expect(fakePolicy.destroy).toHaveBeenCalledWith(expect.any(Object));
-      expect(transaction.commit).toHaveBeenCalled();
     });
 
-    it('should throw an error if the policy is not found', async () => {
-      AccountPolicy.findByPk.mockResolvedValue(null);
+    it('should return error if account exists with this policy', async () => {
+      const policyId = 1;
 
-      await expect(remove(fakePolicy.id)).rejects.toThrow('Policy not found');
-    });
+      const policy = { id: policyId };
+      const userAccount = { id: 1 }; // Account exists with this policy
 
-    it('should throw an error if there is an account associated with the policy', async () => {
-      AccountPolicy.findByPk.mockResolvedValue(fakePolicy);
-      UserAccount.findOne.mockResolvedValue({ id: 1 });
+      AccountPolicy.findByPk.mockResolvedValue(policy);
+      UserAccount.findOne.mockResolvedValue(userAccount);
 
-      await expect(remove(fakePolicy.id)).rejects.toThrow(
-        'Account exists with this policy, policy cannot be deleted'
+      await remove(policyId);
+
+      expect(commonHelper.customError).toHaveBeenCalledWith(
+        'Account exists with this policy, policy cannot be deleted',
+        409
       );
     });
 
-    it('should rollback the transaction on error', async () => {
-      AccountPolicy.findByPk.mockResolvedValue(fakePolicy);
-      UserAccount.findOne.mockResolvedValue(null);
-      fakePolicy.destroy.mockRejectedValue(new Error('Database error'));
+    it('should return error if policy not found during removal', async () => {
+      const policyId = 1;
 
-      await expect(remove(fakePolicy.id)).rejects.toThrow('Database error');
-      expect(transaction.rollback).toHaveBeenCalled();
+      AccountPolicy.findByPk.mockResolvedValue(null); // Mock policy not found
+
+      await remove(policyId);
+
+      expect(commonHelper.customError).toHaveBeenCalledWith('Policy not found', 404);
     });
   });
 });

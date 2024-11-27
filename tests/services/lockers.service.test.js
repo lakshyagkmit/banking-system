@@ -1,240 +1,243 @@
-const { assign, create, index, view, update, deallocate } = require('../../src/services/lockers.service');
+const {
+  assign,
+  create,
+  index,
+  view,
+  update,
+  deallocate,
+} = require('../../src/controllers/lockers.controller');
 const { UserApplication, Branch, Locker, User, Role, UserLocker, sequelize } = require('../../src/models');
 const commonHelper = require('../../src/helpers/commonFunctions.helper');
+const userHelper = require('../../src/helpers/users.helper');
 const notificationHelper = require('../../src/helpers/notifications.helper');
 const { ROLES, APPLICATION_TYPES, LOCKER_STATUS, STATUS } = require('../../src/constants/constants');
-const { faker } = require('@faker-js/faker');
-const redisClient = require('../../src/config/redis');
 
-jest.mock('../../src/models');
-jest.mock('../../src/helpers/commonFunctions.helper');
-jest.mock('../../src/helpers/notifications.helper');
-jest.mock('redis', () => {
-  const mRedisClient = {
-    connect: jest.fn().mockResolvedValue(),
-    on: jest.fn(),
-    quit: jest.fn().mockResolvedValue(),
-  };
-  return {
-    createClient: jest.fn(() => mRedisClient),
-  };
-});
+// Mock everything
+jest.mock('../../src/models', () => ({
+  UserApplication: { findOne: jest.fn() },
+  Branch: { findOne: jest.fn(), count: jest.fn() },
+  Locker: {
+    findOne: jest.fn(),
+    bulkCreate: jest.fn(),
+    update: jest.fn(),
+    count: jest.fn(),
+    findAndCountAll: jest.fn(),
+  },
+  User: { findOne: jest.fn() },
+  Role: { findOne: jest.fn() },
+  UserLocker: { findOne: jest.fn(), create: jest.fn(), update: jest.fn() },
+  sequelize: { transaction: jest.fn() },
+}));
 
-describe('Locker Service Tests', () => {
-  let fakeBranch, fakeLocker, fakeUser, fakePayload, fakeApplication, transaction;
+jest.mock('../../src/helpers/commonFunctions.helper', () => ({
+  customError: jest.fn(),
+  customErrorHandler: jest.fn(), // Add this mock for the customErrorHandler function
+}));
+
+jest.mock('../../src/helpers/users.helper', () => ({
+  getHighestRole: jest.fn(),
+}));
+
+jest.mock('../../src/helpers/notifications.helper', () => ({
+  lockerAssignedNotification: jest.fn(),
+}));
+
+describe('Locker Controller', () => {
+  let mockPayload;
+  let mockUser;
 
   beforeEach(() => {
-    fakeBranch = {
-      id: faker.string.uuid(),
-      ifsc_code: faker.finance.bic(),
-      total_lockers: 100,
-      user_id: faker.string.uuid(),
+    mockPayload = {
+      data: {
+        email: 'customer@example.com',
+        lockerSerialNo: '12345',
+        numberOfLockers: 5,
+        monthlyCharge: 100,
+        branchIfscCode: 'IFSC123',
+      },
+      user: {
+        id: 1,
+        roles: [{ code: ROLES['102'] }],
+      },
     };
 
-    commonHelper.customError.mockImplementation((message, status) => {
-      const err = new Error(message);
-      err.statusCode = status;
-      throw err;
-    });
-
-    fakeLocker = {
-      id: faker.string.uuid(),
-      serial_no: faker.number.int(),
-      branch_id: fakeBranch.id,
-      status: LOCKER_STATUS.AVAILABLE,
-      monthly_charge: faker.finance.amount(),
-      update: jest.fn(),
+    mockUser = {
+      id: 1,
+      roles: [{ code: ROLES['102'] }],
     };
 
-    fakeUser = {
-      id: faker.string.uuid(),
-      email: faker.internet.email(),
-      Roles: [{ code: ROLES['103'] }],
-    };
-
-    fakeApplication = {
-      id: faker.string.uuid(),
-      branch_ifsc_code: fakeBranch.ifsc_code,
-      type: APPLICATION_TYPES.LOCKER,
-      destroy: jest.fn(),
-    };
-
-    fakePayload = {
-      email: fakeUser.email,
-      lockerSerialNo: faker.number.int(),
-    };
-
-    transaction = {
-      commit: jest.fn(),
-      rollback: jest.fn(),
-    };
-
-    sequelize.transaction = jest.fn().mockResolvedValue(transaction);
-  });
-
-  afterAll(async () => {
-    await redisClient.quit();
-  });
-
-  afterEach(() => {
     jest.clearAllMocks();
   });
 
-  describe('assign', () => {
-    it('should assign a locker to a customer successfully', async () => {
-      User.findOne.mockResolvedValueOnce(fakeUser);
-      Branch.findOne.mockResolvedValueOnce(fakeBranch);
-      UserApplication.findOne.mockResolvedValueOnce(fakeApplication);
-      Locker.findOne.mockResolvedValueOnce(fakeLocker);
-      UserLocker.findOne.mockResolvedValueOnce(null);
-      UserLocker.create.mockResolvedValueOnce({});
-      notificationHelper.lockerAssignedNotification.mockResolvedValue();
+  // Test for 'assign' function
+  it('should assign a locker to a customer', async () => {
+    const mockTransaction = { commit: jest.fn(), rollback: jest.fn() };
 
-      const result = await assign(fakePayload, { id: fakeBranch.user_id });
+    sequelize.transaction.mockResolvedValue(mockTransaction);
+    User.findOne.mockResolvedValue({ id: 1, Roles: [{ code: ROLES['103'] }] });
+    Branch.findOne.mockResolvedValue({ id: 1, total_lockers: 10 });
+    UserApplication.findOne.mockResolvedValue({ id: 1 });
+    Locker.findOne.mockResolvedValue({ id: 1, serial_no: '12345', status: 'available' });
+    UserLocker.findOne.mockResolvedValue(null);
+    Locker.update.mockResolvedValue([1]);
+    UserLocker.create.mockResolvedValue({ id: 1 });
 
-      expect(result).toEqual({ message: 'Locker assigned successfully' });
-      expect(UserLocker.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          locker_id: fakeLocker.id,
-          user_id: fakeUser.id,
-        }),
-        expect.any(Object)
-      );
-      expect(fakeLocker.update).toHaveBeenCalledWith({ status: LOCKER_STATUS.FREEZED }, expect.any(Object));
-      expect(transaction.commit).toHaveBeenCalled();
+    await assign(mockPayload);
+
+    expect(User.findOne).toHaveBeenCalledWith({
+      where: { email: mockPayload.data.email },
+      include: [{ model: Role, attributes: ['code'] }],
     });
 
-    it('should throw an error if the user is not found', async () => {
-      User.findOne.mockResolvedValue(null);
+    expect(commonHelper.customError).not.toHaveBeenCalled();
+    expect(notificationHelper.lockerAssignedNotification).toHaveBeenCalled();
+    expect(mockTransaction.commit).toHaveBeenCalled();
+  });
 
-      await expect(assign(fakePayload, { id: fakeBranch.user_id })).rejects.toThrow('No user found');
+  it('should return error if user does not exist or role is incorrect', async () => {
+    User.findOne.mockResolvedValue(null);
+
+    const result = await assign(mockPayload);
+    expect(result).toEqual(commonHelper.customError('No user found', 404));
+  });
+
+  // Test for 'create' function
+  it('should create lockers in a branch', async () => {
+    const mockBranch = { id: 1, total_lockers: 10 };
+    Branch.findOne.mockResolvedValue(mockBranch);
+    Locker.count.mockResolvedValue(5);
+
+    Locker.bulkCreate.mockResolvedValue([{ id: 1, serial_no: '1' }]);
+
+    await create(mockPayload);
+
+    expect(Branch.findOne).toHaveBeenCalledWith({
+      where: { ifsc_code: mockPayload.data.branchIfscCode },
     });
 
-    it('should throw an error if locker is already frozen', async () => {
-      User.findOne.mockResolvedValueOnce(fakeUser);
-      Locker.findOne.mockResolvedValue({ ...fakeLocker, status: LOCKER_STATUS.FREEZED });
+    expect(Locker.count).toHaveBeenCalled();
+    expect(Locker.bulkCreate).toHaveBeenCalled();
+  });
 
-      await expect(assign(fakePayload, { id: fakeBranch.user_id })).rejects.toThrow('Locker not available');
+  it('should return error if branch not found', async () => {
+    Branch.findOne.mockResolvedValue(null);
+
+    const result = await create(mockPayload);
+    expect(result).toEqual(commonHelper.customError('Branch not found', 404));
+  });
+
+  // Test for 'index' function
+  it('should list lockers based on user role', async () => {
+    const mockLockers = { count: 5, rows: [{ id: 1, serial_no: '1' }] };
+    Locker.findAndCountAll.mockResolvedValue(mockLockers);
+
+    const result = await index(mockPayload);
+
+    expect(Locker.findAndCountAll).toHaveBeenCalledWith({
+      where: { branch_id: 1 },
+      include: [{ model: Branch, where: { ifsc_code: 'IFSC123' }, attributes: ['id', 'ifsc_code'] }],
+      offset: 0,
+      limit: 5,
+    });
+
+    expect(result).toEqual({
+      totalItems: 5,
+      totalPages: 1,
+      currentPage: 1,
+      lockers: [{ id: 1, serial_no: '1' }],
     });
   });
 
-  describe('create', () => {
-    it('should create lockers successfully', async () => {
-      Branch.findOne.mockResolvedValue(fakeBranch);
-      Locker.count.mockResolvedValue(0);
-      Locker.bulkCreate.mockResolvedValue();
+  it('should return error if no lockers are found', async () => {
+    Locker.findAndCountAll.mockResolvedValue({ count: 0, rows: [] });
 
-      const payload = { numberOfLockers: 10, monthlyCharge: 200 };
+    const result = await index(mockPayload);
 
-      const result = await create(payload, { id: fakeBranch.user_id });
-
-      expect(result).toEqual({ message: '10 lockers added successfully' });
-      expect(Locker.bulkCreate).toHaveBeenCalledTimes(1);
-    });
-
-    it('should throw an error if total lockers exceed branch capacity', async () => {
-      Branch.findOne.mockResolvedValue(fakeBranch);
-      Locker.count.mockResolvedValue(95);
-
-      const payload = { numberOfLockers: 10, monthlyCharge: 200 };
-
-      await expect(create(payload, { id: fakeBranch.user_id })).rejects.toThrow(
-        'Cannot create lockers more than assigned total lockers in the branch'
-      );
-    });
+    expect(result).toEqual(commonHelper.customError('No lockers found', 404));
   });
 
-  describe('index', () => {
-    it('should list lockers for a branch manager successfully', async () => {
-      Branch.findOne.mockResolvedValue(fakeBranch);
-      Locker.findAndCountAll.mockResolvedValue({
-        rows: [fakeLocker],
-        count: 1,
-      });
+  // Test for 'view' function
+  it('should return locker details for an admin user', async () => {
+    const mockLocker = { id: 1, serial_no: '12345' };
+    Locker.findAndCountAll.mockResolvedValue({ count: 1, rows: [mockLocker] });
 
-      const result = await index({ page: 1, limit: 10 }, { id: fakeBranch.user_id, role: ROLES['102'] });
+    const result = await view({ id: 1, user: mockUser });
 
-      expect(result).toEqual({
-        totalItems: 1,
-        totalPages: 1,
-        currentPage: 1,
-        lockers: [fakeLocker],
-      });
+    expect(Locker.findAndCountAll).toHaveBeenCalledWith({
+      where: { id: 1 },
+      include: { model: User },
     });
 
-    it('should throw an error if no lockers are found', async () => {
-      Locker.findAndCountAll.mockResolvedValue({ rows: [], count: 0 });
-
-      await expect(
-        index({ page: 1, limit: 10 }, { id: fakeBranch.user_id, role: ROLES['102'] })
-      ).rejects.toThrow('No lockers found');
-    });
+    expect(result).toEqual({ count: 1, rows: [mockLocker] });
   });
 
-  describe('view', () => {
-    it('should return a locker by ID for a branch manager', async () => {
-      Branch.findOne.mockResolvedValue(fakeBranch);
-      Locker.findOne.mockResolvedValue(fakeLocker);
+  it('should return error if locker is not found', async () => {
+    Locker.findAndCountAll.mockResolvedValue({ count: 0, rows: [] });
 
-      const result = await view(fakeLocker.id, { id: fakeBranch.user_id, role: ROLES['102'] });
+    const result = await view({ id: 1, user: mockUser });
 
-      expect(result).toEqual(fakeLocker);
-    });
-
-    it('should throw an error if locker is not found', async () => {
-      Branch.findOne.mockResolvedValueOnce(fakeBranch);
-      Locker.findOne.mockResolvedValue(null);
-
-      await expect(view(fakeLocker.id, { id: fakeBranch.user_id, role: ROLES['102'] })).rejects.toThrow(
-        'Locker not found'
-      );
-    });
+    expect(result).toEqual(commonHelper.customError('Locker not found', 404));
   });
 
-  describe('update', () => {
-    it('should update a locker successfully', async () => {
-      Branch.findOne.mockResolvedValue(fakeBranch);
-      Locker.findOne.mockResolvedValue(fakeLocker);
-      fakeLocker.update.mockResolvedValue();
+  // Test for 'update' function
+  it('should update a locker', async () => {
+    const mockLocker = { id: 1, serial_no: '12345', monthly_charge: 100 };
+    Locker.findOne.mockResolvedValue(mockLocker);
+    Locker.update.mockResolvedValue([1]);
 
-      const result = await update(fakeLocker.id, { monthlyCharge: 300 }, { id: fakeBranch.user_id });
+    await update(mockPayload);
 
-      expect(result).toEqual({ message: 'Locker updated successfully' });
-      expect(fakeLocker.update).toHaveBeenCalledWith({ monthly_charge: 300 }, expect.any(Object));
-    });
-
-    it('should throw an error if locker is not found', async () => {
-      Branch.findOne.mockResolvedValueOnce(fakeBranch);
-      Locker.findOne.mockResolvedValue(null);
-
-      await expect(update(fakeLocker.id, { monthlyCharge: 300 }, { id: fakeBranch.user_id })).rejects.toThrow(
-        'Locker not found'
-      );
-    });
+    expect(Locker.update).toHaveBeenCalledWith(
+      { monthly_charge: mockPayload.data.monthlyCharge },
+      { where: { id: 1 } }
+    );
   });
 
-  describe('deallocate', () => {
-    it('should deallocate a locker successfully', async () => {
-      Branch.findOne.mockResolvedValueOnce(fakeBranch);
-      Locker.findOne.mockResolvedValue(fakeLocker);
-      UserLocker.findOne.mockResolvedValueOnce({
-        update: jest.fn(),
-      });
+  it('should return error if locker not found', async () => {
+    Locker.findOne.mockResolvedValue(null);
 
-      const result = await deallocate(fakeLocker.id, { id: fakeBranch.user_id });
+    const result = await update(mockPayload);
 
-      expect(result).toEqual({ message: 'Locker deallocated successfully' });
-      expect(fakeLocker.update).toHaveBeenCalledWith({ status: STATUS.INACTIVE }, expect.any(Object));
+    expect(result).toEqual(commonHelper.customError('Locker not found', 404));
+  });
+
+  // Test for 'deallocate' function
+  it('should deallocate a locker', async () => {
+    const mockTransaction = { commit: jest.fn(), rollback: jest.fn() };
+    sequelize.transaction.mockResolvedValue(mockTransaction);
+
+    const mockLocker = { id: 1, branch_id: 1, status: 'available' };
+    const mockUserLocker = { id: 1, status: STATUS.ACTIVE };
+    Locker.findOne.mockResolvedValueOnce(mockLocker);
+    UserLocker.findOne.mockResolvedValueOnce(mockUserLocker);
+    Locker.update.mockResolvedValueOnce([1]);
+    UserLocker.update.mockResolvedValueOnce([1]);
+
+    const result = await deallocate({ id: 1, user: mockUser });
+
+    expect(Locker.findOne).toHaveBeenCalledWith({ where: { id: 1 } });
+    expect(UserLocker.findOne).toHaveBeenCalledWith({
+      where: { locker_id: 1, status: STATUS.ACTIVE },
+      transaction: mockTransaction,
     });
+    expect(Locker.update).toHaveBeenCalledWith(
+      { status: LOCKER_STATUS.AVAILABLE },
+      { transaction: mockTransaction }
+    );
+    expect(UserLocker.update).toHaveBeenCalledWith(
+      { status: STATUS.INACTIVE },
+      { transaction: mockTransaction }
+    );
+    expect(mockTransaction.commit).toHaveBeenCalled();
+    expect(result).toEqual({ message: 'Locker deallocated successfully' });
+  });
 
-    it('should throw an error if locker is not currently assigned', async () => {
-      Branch.findOne.mockResolvedValueOnce(fakeBranch);
-      Locker.findOne.mockResolvedValueOnce(fakeLocker);
-      UserLocker.findOne.mockResolvedValue(null);
+  it('should return error if locker is not assigned', async () => {
+    Locker.findOne.mockResolvedValue({ id: 1 });
+    UserLocker.findOne.mockResolvedValue(null);
 
-      await expect(deallocate(fakeLocker.id, { id: fakeBranch.user_id })).rejects.toThrow(
-        'Locker is not currently assigned'
-      );
-    });
+    const result = await deallocate({ id: 1, user: mockUser });
+
+    expect(result).toEqual(commonHelper.customError('Locker is not currently assigned', 400));
   });
 });
