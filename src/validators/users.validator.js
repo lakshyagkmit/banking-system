@@ -65,7 +65,7 @@ const rolesUpdateSchema = async (req, res, next) => {
       .messages({
         'array.base': 'rolesToRemove must be an array.',
       }),
-  });
+  }).min(1);
 
   validateHelper.validateRequest(req, res, next, schema, 'body');
 };
