@@ -49,9 +49,10 @@ describe('Application Controller', () => {
 
       await applicationController.requestAccount(req, res, next);
 
+      const expectedPayload = { data: req.body, user: mockUser };
       expect(res.data).toEqual(req.body);
       expect(res.statusCode).toBe(201);
-      expect(applicationService.requestAccount).toHaveBeenCalledWith(req.body, mockUser);
+      expect(applicationService.requestAccount).toHaveBeenCalledWith(expectedPayload);
       expect(next).toHaveBeenCalled();
     });
 
@@ -92,9 +93,10 @@ describe('Application Controller', () => {
 
       await applicationController.requestLocker(req, res, next);
 
+      const expectedPayload = { data: req.body, user: mockUser };
       expect(res.data).toEqual(req.body);
       expect(res.statusCode).toBe(201);
-      expect(applicationService.requestLocker).toHaveBeenCalledWith(req.body, mockUser);
+      expect(applicationService.requestLocker).toHaveBeenCalledWith(expectedPayload);
       expect(next).toHaveBeenCalled();
     });
 
@@ -136,9 +138,10 @@ describe('Application Controller', () => {
 
       await applicationController.index(req, res, next);
 
+      const expectedPayload = { query: req.query, user: mockUser };
       expect(res.data).toEqual(mockApplications);
       expect(res.statusCode).toBe(201);
-      expect(applicationService.index).toHaveBeenCalledWith(req.query, mockUser);
+      expect(applicationService.index).toHaveBeenCalledWith(expectedPayload);
       expect(next).toHaveBeenCalled();
     });
 
@@ -181,9 +184,10 @@ describe('Application Controller', () => {
 
       await applicationController.view(req, res, next);
 
+      const expectedPayload = { id: applicationId, user: mockUser };
       expect(res.data).toEqual(mockApplication);
       expect(res.statusCode).toBe(201);
-      expect(applicationService.view).toHaveBeenCalledWith(applicationId, mockUser);
+      expect(applicationService.view).toHaveBeenCalledWith(expectedPayload);
       expect(next).toHaveBeenCalled();
     });
 

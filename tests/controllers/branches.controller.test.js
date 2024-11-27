@@ -43,7 +43,7 @@ describe('Branch Controller', () => {
 
       expect(res.data).toEqual(req.body);
       expect(res.statusCode).toBe(201);
-      expect(branchService.create).toHaveBeenCalledWith(req.body);
+      expect(branchService.create).toHaveBeenCalledWith({ data: req.body });
       expect(next).toHaveBeenCalled();
     });
 
@@ -86,7 +86,7 @@ describe('Branch Controller', () => {
 
       expect(res.data).toEqual(branches);
       expect(res.statusCode).toBe(200);
-      expect(branchService.index).toHaveBeenCalledWith(req.query);
+      expect(branchService.index).toHaveBeenCalledWith({ query: req.query });
       expect(next).toHaveBeenCalled();
     });
 
@@ -175,7 +175,10 @@ describe('Branch Controller', () => {
       expect(res.data).toEqual(updatedBranch);
       expect(res.message).toBe('Branch updated successfully');
       expect(res.statusCode).toBe(200);
-      expect(branchService.update).toHaveBeenCalledWith(req.params.id, req.body);
+      expect(branchService.update).toHaveBeenCalledWith({
+        data: req.body,
+        id: req.params.id,
+      });
       expect(next).toHaveBeenCalled();
     });
 

@@ -31,12 +31,12 @@ describe('Policy Controller', () => {
     it('should successfully create a policy and return 201', async () => {
       const req = {
         body: {
-          accountType: faker.helpers.arrayElement([...Object.values(constants.ACCOUNT_TYPES)]),
-          initialAmount: faker.finance.amount(),
-          interestRate: faker.number.float({ min: 0, max: 10 }),
-          minimumAmount: faker.finance.amount(),
-          lockInPeriod: faker.number.int({ min: 0, max: 10 }),
-          penaltyFee: faker.number.float({ min: 0, max: 100 }),
+          accountType: 'savings',
+          initialAmount: '1000',
+          interestRate: 5,
+          minimumAmount: '500',
+          lockInPeriod: 2,
+          penaltyFee: 50,
         },
       };
       const res = { data: null, statusCode: null };
@@ -48,7 +48,7 @@ describe('Policy Controller', () => {
 
       expect(res.data).toEqual(req.body);
       expect(res.statusCode).toBe(201);
-      expect(policyService.create).toHaveBeenCalledWith(req.body);
+      expect(policyService.create).toHaveBeenCalledWith({ data: req.body });
       expect(next).toHaveBeenCalled();
     });
 
@@ -74,22 +74,22 @@ describe('Policy Controller', () => {
   });
 
   describe('index', () => {
-    it('should successfully get list of policies and return 200', async () => {
+    it('should successfully get a list of policies and return 200', async () => {
       const req = {
         query: { limit: 10, page: 1 },
       };
       const res = { data: null, statusCode: null };
       const next = jest.fn();
 
-      policyService.index.mockResolvedValue([
-        { id: faker.string.uuid(), name: faker.commerce.productName() },
-      ]);
+      // Mock the policyService.index response
+      policyService.index.mockResolvedValue([{ id: '123', name: 'Policy 1' }]);
 
       await policyController.index(req, res, next);
 
+      // Assert the response
       expect(res.data).toBeDefined();
       expect(res.statusCode).toBe(200);
-      expect(policyService.index).toHaveBeenCalledWith(req.query);
+      expect(policyService.index).toHaveBeenCalledWith({ query: req.query });
       expect(next).toHaveBeenCalled();
     });
 
@@ -150,8 +150,8 @@ describe('Policy Controller', () => {
   describe('update', () => {
     it('should successfully update a policy and return 200', async () => {
       const req = {
-        params: { id: faker.string.uuid() },
-        body: { interestRate: faker.number.float({ min: 0, max: 10 }) },
+        params: { id: '123' },
+        body: { interestRate: 5 },
       };
       const res = { data: null, statusCode: null };
       const next = jest.fn();
@@ -162,7 +162,7 @@ describe('Policy Controller', () => {
 
       expect(res.data).toEqual(req.body);
       expect(res.statusCode).toBe(200);
-      expect(policyService.update).toHaveBeenCalledWith(req.params.id, req.body);
+      expect(policyService.update).toHaveBeenCalledWith({ id: req.params.id, data: req.body });
       expect(next).toHaveBeenCalled();
     });
 

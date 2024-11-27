@@ -42,16 +42,19 @@ describe('Auth Controller', () => {
         },
         file: null, // Assuming file is optional
       };
-      const res = { data: null, statusCode: null };
+      const res = { message: null, statusCode: null };
       const next = jest.fn();
 
-      authService.register.mockResolvedValue(req.body);
+      authService.register.mockResolvedValue();
 
       await authController.register(req, res, next);
 
-      expect(res.data).toEqual(req.body);
+      expect(res.message).toBe('User registered successfully');
       expect(res.statusCode).toBe(201);
-      expect(authService.register).toHaveBeenCalledWith(req.body, req.file);
+      expect(authService.register).toHaveBeenCalledWith({
+        data: req.body,
+        file: req.file,
+      });
       expect(next).toHaveBeenCalled();
     });
 
@@ -89,7 +92,9 @@ describe('Auth Controller', () => {
 
       expect(res.message).toBe('Email Verified Successfully');
       expect(res.statusCode).toBe(200);
-      expect(authService.verifyEmail).toHaveBeenCalledWith(req.body.email, req.body.otp);
+      expect(authService.verifyEmail).toHaveBeenCalledWith({
+        data: req.body,
+      });
       expect(next).toHaveBeenCalled();
     });
 
@@ -121,7 +126,9 @@ describe('Auth Controller', () => {
 
       expect(res.message).toBe('OTP sent on email');
       expect(res.statusCode).toBe(200);
-      expect(authService.login).toHaveBeenCalledWith(req.body.email);
+      expect(authService.login).toHaveBeenCalledWith({
+        data: req.body,
+      });
       expect(next).toHaveBeenCalled();
     });
 
@@ -155,7 +162,9 @@ describe('Auth Controller', () => {
       expect(res.token).toBe(mockToken);
       expect(res.message).toBe('OTP sent on email');
       expect(res.statusCode).toBe(200);
-      expect(authService.verifyOtp).toHaveBeenCalledWith(req.body.email, req.body.otp);
+      expect(authService.verifyOtp).toHaveBeenCalledWith({
+        data: req.body,
+      });
       expect(next).toHaveBeenCalled();
     });
 
@@ -187,23 +196,31 @@ describe('Auth Controller', () => {
 
       expect(res.message).toBe('OTP resent to email');
       expect(res.statusCode).toBe(200);
-      expect(authService.resendOtp).toHaveBeenCalledWith(req.body.email);
+      expect(authService.resendOtp).toHaveBeenCalledWith({
+        data: req.body,
+      });
       expect(next).toHaveBeenCalled();
     });
 
     it('should handle errors gracefully', async () => {
-      const req = { body: { email: 'invalidEmail', otp: '123456' } };
+      const req = { body: { email: 'invalidEmail' } };
       const res = {};
       const next = jest.fn();
 
-      const err = new Error('Invalid OTP');
+      const err = new Error('Failed to resend OTP');
       err.statusCode = 400;
 
       authService.resendOtp.mockRejectedValue(err);
 
       await authController.resendOtp(req, res, next);
 
-      expect(commonHelper.customErrorHandler).toHaveBeenCalledWith(req, res, 'Invalid OTP', 400, err);
+      expect(commonHelper.customErrorHandler).toHaveBeenCalledWith(
+        req,
+        res,
+        'Failed to resend OTP',
+        400,
+        err
+      );
     });
   });
 

@@ -45,13 +45,15 @@ describe('Accounts Controller', () => {
       const res = { data: null, statusCode: null };
       const next = jest.fn();
 
+      const expectedPayload = { data: req.body, user: req.user };
+
       accountService.create.mockResolvedValue(req.body);
 
       await accountsController.create(req, res, next);
 
       expect(res.data).toEqual(req.body);
       expect(res.statusCode).toBe(201);
-      expect(accountService.create).toHaveBeenCalledWith(req.body, mockUser);
+      expect(accountService.create).toHaveBeenCalledWith(expectedPayload);
       expect(next).toHaveBeenCalled();
     });
 
@@ -84,13 +86,15 @@ describe('Accounts Controller', () => {
       const next = jest.fn();
 
       const mockAccounts = Array.from({ length: 3 }, generateFakePayload);
+      const expectedPayload = { query: req.query, user: req.user };
+
       accountService.index.mockResolvedValue(mockAccounts);
 
       await accountsController.index(req, res, next);
 
       expect(res.data).toEqual(mockAccounts);
       expect(res.statusCode).toBe(200);
-      expect(accountService.index).toHaveBeenCalledWith(req.query, mockUser);
+      expect(accountService.index).toHaveBeenCalledWith(expectedPayload);
       expect(next).toHaveBeenCalled();
     });
 
@@ -118,13 +122,15 @@ describe('Accounts Controller', () => {
       const next = jest.fn();
 
       const mockAccount = generateFakePayload();
+      const expectedPayload = { id: accountId, user: req.user };
+
       accountService.view.mockResolvedValue(mockAccount);
 
       await accountsController.view(req, res, next);
 
       expect(res.data).toEqual(mockAccount);
       expect(res.statusCode).toBe(200);
-      expect(accountService.view).toHaveBeenCalledWith(accountId, mockUser);
+      expect(accountService.view).toHaveBeenCalledWith(expectedPayload);
       expect(next).toHaveBeenCalled();
     });
 
@@ -158,6 +164,8 @@ describe('Accounts Controller', () => {
       const res = { message: null, data: null, statusCode: null };
       const next = jest.fn();
 
+      const expectedPayload = { id: accountId, data: req.body, user: req.user };
+
       accountService.update.mockResolvedValue(req.body);
 
       await accountsController.update(req, res, next);
@@ -165,7 +173,7 @@ describe('Accounts Controller', () => {
       expect(res.message).toBe('Account updated successfully');
       expect(res.data).toEqual(req.body);
       expect(res.statusCode).toBe(200);
-      expect(accountService.update).toHaveBeenCalledWith(accountId, req.body, mockUser);
+      expect(accountService.update).toHaveBeenCalledWith(expectedPayload);
       expect(next).toHaveBeenCalled();
     });
 
@@ -193,13 +201,15 @@ describe('Accounts Controller', () => {
       const res = { message: null, statusCode: null };
       const next = jest.fn();
 
+      const expectedPayload = { id: accountId, user: req.user };
+
       accountService.remove.mockResolvedValue();
 
       await accountsController.remove(req, res, next);
 
       expect(res.message).toBe('Account deleted successfully');
       expect(res.statusCode).toBe(204);
-      expect(accountService.remove).toHaveBeenCalledWith(accountId, mockUser);
+      expect(accountService.remove).toHaveBeenCalledWith(expectedPayload);
       expect(next).toHaveBeenCalled();
     });
 

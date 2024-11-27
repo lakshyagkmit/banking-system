@@ -42,9 +42,9 @@ describe('Locker Controller', () => {
 
       await lockerController.assign(req, res, next);
 
-      expect(res.data).toEqual(req.body);
+      expect(res.data).toEqual(null);
       expect(res.statusCode).toBe(200);
-      expect(lockerService.assign).toHaveBeenCalledWith(req.body, req.user);
+      expect(lockerService.assign).toHaveBeenCalledWith({ data: req.body, user: req.user });
       expect(next).toHaveBeenCalled();
     });
 
@@ -85,9 +85,9 @@ describe('Locker Controller', () => {
 
       await lockerController.create(req, res, next);
 
-      expect(res.data).toEqual(req.body);
+      expect(res.data).toEqual(null);
       expect(res.statusCode).toBe(201);
-      expect(lockerService.create).toHaveBeenCalledWith(req.body, req.user);
+      expect(lockerService.create).toHaveBeenCalledWith({ data: req.body, user: req.user });
       expect(next).toHaveBeenCalled();
     });
 
@@ -129,7 +129,7 @@ describe('Locker Controller', () => {
 
       expect(res.data).toBeDefined();
       expect(res.statusCode).toBe(200);
-      expect(lockerService.index).toHaveBeenCalledWith(req.query, req.user);
+      expect(lockerService.index).toHaveBeenCalledWith({ query: req.query, user: req.user });
       expect(next).toHaveBeenCalled();
     });
 
@@ -172,7 +172,7 @@ describe('Locker Controller', () => {
 
       expect(res.data).toBeDefined();
       expect(res.statusCode).toBe(200);
-      expect(lockerService.view).toHaveBeenCalledWith(req.params.id, req.user);
+      expect(lockerService.view).toHaveBeenCalledWith({ id: req.params.id, user: req.user });
       expect(next).toHaveBeenCalled();
     });
 
@@ -205,9 +205,13 @@ describe('Locker Controller', () => {
 
       await lockerController.update(req, res, next);
 
-      expect(res.data).toEqual(req.body);
+      expect(res.data).toEqual(null);
       expect(res.statusCode).toBe(200);
-      expect(lockerService.update).toHaveBeenCalledWith(req.params.id, req.body, req.user);
+      expect(lockerService.update).toHaveBeenCalledWith({
+        id: req.params.id,
+        data: req.body,
+        user: req.user,
+      });
       expect(next).toHaveBeenCalled();
     });
 
@@ -247,7 +251,7 @@ describe('Locker Controller', () => {
 
       expect(res.message).toBe('Locker Deallocated successfully');
       expect(res.statusCode).toBe(204);
-      expect(lockerService.deallocate).toHaveBeenCalledWith(req.params.id, req.user);
+      expect(lockerService.deallocate).toHaveBeenCalledWith({ id: req.params.id, user: req.user });
       expect(next).toHaveBeenCalled();
     });
 
