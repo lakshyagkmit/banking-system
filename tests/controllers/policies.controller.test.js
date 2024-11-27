@@ -161,7 +161,7 @@ describe('Policy Controller', () => {
       await policyController.update(req, res, next);
 
       expect(res.data).toEqual(req.body);
-      expect(res.statusCode).toBe(200);
+      expect(res.statusCode).toBe(202);
       expect(policyService.update).toHaveBeenCalledWith({ id: req.params.id, data: req.body });
       expect(next).toHaveBeenCalled();
     });

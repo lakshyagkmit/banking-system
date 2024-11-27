@@ -172,7 +172,7 @@ describe('Accounts Controller', () => {
 
       expect(res.message).toBe('Account updated successfully');
       expect(res.data).toEqual(req.body);
-      expect(res.statusCode).toBe(200);
+      expect(res.statusCode).toBe(202);
       expect(accountService.update).toHaveBeenCalledWith(expectedPayload);
       expect(next).toHaveBeenCalled();
     });
