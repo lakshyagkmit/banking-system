@@ -8,11 +8,9 @@ const { ROLES } = require('../constants/constants');
 // Create a  new account for customer based on his application
 async function create(payload) {
   const { data, user } = payload;
+  const { userId, type, nominee } = data;
   const transaction = await sequelize.transaction();
   try {
-    const { userId, type, nominee, branchIfscCode } = data;
-    const { role } = user;
-
     const customer = await User.findOne({
       where: { id: userId },
       include: {
@@ -22,39 +20,37 @@ async function create(payload) {
     });
 
     if (!customer || !customer.Roles) {
-      return commonHelper.customError('No user Found', 404);
+      return commonHelper.customError('No user found with the specified ID.', 404);
     }
 
-    const branch = await Branch.findOne({
-      where: { ifsc_code: branchIfscCode },
+    const branchManager = await User.findOne({
+      where: { id: user.id },
+      include: [
+        {
+          model: Branch,
+        },
+      ],
     });
 
-    if (!branch) {
-      return commonHelper.customError('No branch Found.', 404);
+    if (!branchManager || !branchManager.Branch) {
+      return commonHelper.customError('Branch manager is not authorized to create a branch.', 403);
     }
+
+    const branchIfscCode = branchManager.Branch.ifsc_code;
 
     const application = await UserApplication.findOne({
       where: {
         user_id: customer.id,
-        branch_ifsc_code: branch.ifsc_code,
-        type: type,
+        branch_ifsc_code: branchIfscCode,
+        type,
       },
     });
 
     if (!application) {
-      return commonHelper.customError('No application found, cannot create account to this user', 404);
-    }
-
-    const branchId = branch.id;
-
-    if (role === ROLES['102']) {
-      const branch = await Branch.findOne({
-        where: { branch_manager_id: user.id },
-      });
-
-      if (!branch || branch.id !== branchId) {
-        return commonHelper.customError('Branch managers can only create accounts in their own branch.', 403);
-      }
+      return commonHelper.customError(
+        'No application found for the user in the specified branch or account type.',
+        404
+      );
     }
 
     const existingAccount = await UserAccount.findOne({
@@ -72,13 +68,11 @@ async function create(payload) {
     }
 
     const policy = await AccountPolicy.findOne({
-      where: {
-        account_type: type,
-      },
+      where: { account_type: type },
     });
 
     if (!policy) {
-      return commonHelper.customError('Invalid type', 409);
+      return commonHelper.customError('Invalid account type provided.', 409);
     }
 
     const accountNumber = accountHelper.generateAccountNumber();
@@ -86,7 +80,7 @@ async function create(payload) {
     const newAccount = await UserAccount.create(
       {
         policy_id: policy.id,
-        branch_id: branchId,
+        branch_id: branchManager.Branch.id,
         user_id: userId,
         type,
         number: accountNumber,
@@ -99,12 +93,13 @@ async function create(payload) {
     await application.destroy({ transaction });
 
     await transaction.commit();
+
     notificationHelper.accountCreationNotification(customer.email, type, accountNumber);
 
     return newAccount;
-  } catch (error) {
+  } catch (err) {
     await transaction.rollback();
-    throw error;
+    throw err;
   }
 }
 

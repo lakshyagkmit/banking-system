@@ -98,25 +98,25 @@ async function update(payload) {
   if (branchManagerId) {
     const branchManager = await User.findOne({
       where: { id: branchManagerId },
-      include: {
-        model: Role,
-        where: { code: ROLES['102'] },
-        through: { attributes: [] },
-      },
+      include: [
+        {
+          model: Role,
+          where: { code: ROLES['102'] },
+          through: { attributes: [] },
+        },
+        {
+          model: Branch,
+          where: { id: { [Op.ne]: id } },
+          required: false,
+        },
+      ],
     });
 
     if (!branchManager) {
       return commonHelper.customError('The specified user is not authorized as a Branch Manager', 403);
     }
 
-    const managingOtherBranch = await Branch.findOne({
-      where: {
-        branch_manager_id: branchManagerId,
-        id: { [Op.ne]: id },
-      },
-    });
-
-    if (managingOtherBranch) {
+    if (branchManager.Branch) {
       return commonHelper.customError(
         'The specified Branch Manager is already assigned to another branch',
         409

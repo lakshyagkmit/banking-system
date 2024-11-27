@@ -128,7 +128,7 @@ async function create(payload) {
   }
 
   const lockers = [];
-  for (let i = lockerCount; i < numberOfLockers; i++) {
+  for (let i = lockerCount; i < lockerCount + numberOfLockers; i++) {
     lockers.push({
       branch_id: branch.id,
       serial_no: i + 1,
@@ -190,7 +190,6 @@ async function index(payload) {
 // view a locker by id based on role
 async function view(payload) {
   const { id, user } = payload;
-
   const userRole = userHelper.getHighestRole(user.roles);
 
   let whereCondition = {};

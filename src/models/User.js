@@ -19,6 +19,10 @@ module.exports = (sequelize, DataTypes) => {
       User.hasMany(models.UserAccount, {
         foreignKey: 'user_id',
       });
+
+      User.hasOne(models.Branch, {
+        foreignKey: 'branch_manager_id',
+      });
     }
   }
 
