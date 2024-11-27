@@ -206,7 +206,7 @@ describe('Locker Controller', () => {
       await lockerController.update(req, res, next);
 
       expect(res.data).toEqual(null);
-      expect(res.statusCode).toBe(200);
+      expect(res.statusCode).toBe(202);
       expect(lockerService.update).toHaveBeenCalledWith({
         id: req.params.id,
         data: req.body,

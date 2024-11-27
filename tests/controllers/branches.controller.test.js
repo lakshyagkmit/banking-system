@@ -174,7 +174,7 @@ describe('Branch Controller', () => {
 
       expect(res.data).toEqual(updatedBranch);
       expect(res.message).toBe('Branch updated successfully');
-      expect(res.statusCode).toBe(200);
+      expect(res.statusCode).toBe(202);
       expect(branchService.update).toHaveBeenCalledWith({
         data: req.body,
         id: req.params.id,

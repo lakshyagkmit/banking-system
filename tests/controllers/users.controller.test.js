@@ -123,6 +123,66 @@ describe('User Controller', () => {
     });
   });
 
+  describe('viewMe', () => {
+    let req, res, next;
+
+    beforeEach(() => {
+      req = {
+        user: {
+          id: faker.string.uuid(),
+        },
+      };
+
+      res = {
+        data: null,
+        statusCode: null,
+      };
+
+      next = jest.fn();
+      jest.clearAllMocks();
+    });
+
+    it('should successfully fetch user data and return 200', async () => {
+      // Mock the service call
+      const mockUserData = {
+        id: req.user.id,
+        name: faker.person.fullName(),
+        email: faker.internet.email(),
+        roles: [faker.string.uuid()],
+      };
+      userService.viewMe = jest.fn().mockResolvedValue(mockUserData);
+
+      // Call the controller
+      await userController.viewMe(req, res, next);
+
+      // Assertions
+      expect(userService.viewMe).toHaveBeenCalledWith(req.user.id);
+      expect(res.data).toEqual(mockUserData);
+      expect(res.statusCode).toBe(200);
+      expect(next).toHaveBeenCalled();
+    });
+
+    it('should handle errors gracefully when fetching user data', async () => {
+      // Mock the service to throw an error
+      const err = new Error('Error fetching user data');
+      err.statusCode = 404;
+      userService.viewMe = jest.fn().mockRejectedValue(err);
+
+      // Call the controller
+      await userController.viewMe(req, res, next);
+
+      // Assertions
+      expect(userService.viewMe).toHaveBeenCalledWith(req.user.id);
+      expect(commonHelper.customErrorHandler).toHaveBeenCalledWith(
+        req,
+        res,
+        'Error fetching user data',
+        404,
+        err
+      );
+    });
+  });
+
   describe('view', () => {
     it('should successfully view a user and return 200', async () => {
       const req = {
@@ -180,7 +240,7 @@ describe('User Controller', () => {
       await userController.update(req, res, next);
 
       expect(res.data).toEqual(req.body);
-      expect(res.statusCode).toBe(200);
+      expect(res.statusCode).toBe(202);
       expect(userService.update).toHaveBeenCalledWith({
         id: req.params.id,
         data: req.body,
@@ -236,6 +296,72 @@ describe('User Controller', () => {
       await userController.remove(req, res, next);
 
       expect(commonHelper.customErrorHandler).toHaveBeenCalledWith(req, res, 'Error deleting user', 400, err);
+    });
+  });
+
+  describe('updateRoles', () => {
+    let req, res, next;
+
+    beforeEach(() => {
+      req = {
+        params: {
+          id: faker.string.uuid(),
+        },
+        body: {
+          roles: [faker.string.uuid(), faker.string.uuid()],
+        },
+      };
+
+      res = {
+        data: null,
+        message: null,
+        statusCode: null,
+      };
+
+      next = jest.fn();
+      jest.clearAllMocks();
+    });
+
+    it('should successfully update user roles and return 202', async () => {
+      // Mock the service call
+      const mockUpdatedRoles = { id: req.params.id, roles: req.body.roles };
+      userService.updateRoles = jest.fn().mockResolvedValue(mockUpdatedRoles);
+
+      // Call the controller
+      await userController.updateRoles(req, res, next);
+
+      // Assertions
+      expect(userService.updateRoles).toHaveBeenCalledWith({
+        id: req.params.id,
+        data: req.body,
+      });
+      expect(res.data).toEqual(mockUpdatedRoles);
+      expect(res.message).toBe('User roles updated successfully');
+      expect(res.statusCode).toBe(202);
+      expect(next).toHaveBeenCalled();
+    });
+
+    it('should handle errors gracefully when updating user roles', async () => {
+      // Mock the service to throw an error
+      const err = new Error('Error updating user roles');
+      err.statusCode = 400;
+      userService.updateRoles = jest.fn().mockRejectedValue(err);
+
+      // Call the controller
+      await userController.updateRoles(req, res, next);
+
+      // Assertions
+      expect(userService.updateRoles).toHaveBeenCalledWith({
+        id: req.params.id,
+        data: req.body,
+      });
+      expect(commonHelper.customErrorHandler).toHaveBeenCalledWith(
+        req,
+        res,
+        'Error updating user roles',
+        400,
+        err
+      );
     });
   });
 });

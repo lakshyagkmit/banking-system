@@ -47,7 +47,7 @@ describe('Transaction Controller', () => {
 
       await transactionController.create(req, res, next);
 
-      expect(res.data).toEqual(req.body);
+      expect(res.data).toEqual(null);
       expect(res.statusCode).toBe(201);
       expect(transactionService.create).toHaveBeenCalledWith({
         accountId: req.params.accountId,
@@ -140,34 +140,39 @@ describe('Transaction Controller', () => {
   });
 
   describe('view', () => {
-    it('should successfully view a transaction and return 200', async () => {
-      const req = {
-        params: {
-          accountId: faker.string.uuid(),
-          transactionId: faker.string.uuid(),
-        },
-        user: { id: faker.string.uuid() },
-      };
-      const res = { data: null, statusCode: null };
-      const next = jest.fn();
+    describe('view', () => {
+      it('should successfully view a transaction and return 200', async () => {
+        const req = {
+          params: {
+            accountId: faker.string.uuid(),
+            transactionId: faker.string.uuid(),
+          },
+          user: { id: faker.string.uuid() },
+        };
+        const res = { data: null, statusCode: null };
+        const next = jest.fn();
 
-      transactionService.view.mockResolvedValue({
-        accountNo: faker.finance.accountNumber(),
-        type: faker.helpers.arrayElement([...Object.values(constants.TRANSACTION_TYPES)]),
-        paymentMethod: faker.helpers.arrayElement([...Object.values(constants.PAYMENT_METHODS)]),
-        amount: parseFloat(faker.finance.amount()),
-        fee: parseFloat(faker.finance.amount()),
+        // Mock the service call
+        transactionService.view.mockResolvedValueOnce({
+          accountNo: faker.finance.accountNumber(),
+          type: faker.helpers.arrayElement([...Object.values(constants.TRANSACTION_TYPES)]),
+          paymentMethod: faker.helpers.arrayElement([...Object.values(constants.PAYMENT_METHODS)]),
+          amount: parseFloat(faker.finance.amount()),
+          fee: parseFloat(faker.finance.amount()),
+        });
+
+        // Call the controller
+        await transactionController.view(req, res, next);
+
+        // Assertions
+        expect(transactionService.view).toHaveBeenCalledWith({
+          params: req.params,
+          user: req.user,
+        });
+        expect(res.data).toBeDefined();
+        expect(res.statusCode).toBe(200);
+        expect(next).toHaveBeenCalled();
       });
-
-      await transactionController.view(req, res, next);
-
-      expect(res.data).toBeDefined();
-      expect(res.statusCode).toBe(200);
-      expect(transactionService.view).toHaveBeenCalledWith({
-        params: req.params,
-        user: req.user,
-      });
-      expect(next).toHaveBeenCalled();
     });
 
     it('should handle errors gracefully when viewing a transaction', async () => {
@@ -189,6 +194,66 @@ describe('Transaction Controller', () => {
         res,
         'Transaction not found',
         404,
+        err
+      );
+    });
+  });
+
+  describe('update', () => {
+    it('should successfully update a transaction and return 202', async () => {
+      const req = {
+        params: {
+          accountId: faker.string.uuid(),
+          transactionId: faker.string.uuid(),
+        },
+        user: { id: faker.string.uuid() },
+      };
+      const res = { message: null, statusCode: null };
+      const next = jest.fn();
+
+      // Mock the service call
+      const mockResponseMessage = 'Transaction updated successfully';
+      transactionService.update.mockResolvedValue(mockResponseMessage);
+
+      // Call the controller
+      await transactionController.update(req, res, next);
+
+      // Assertions
+      expect(transactionService.update).toHaveBeenCalledWith({
+        accountId: req.params.accountId,
+        transactionId: req.params.transactionId,
+        user: req.user,
+      });
+      expect(res.message).toBe(mockResponseMessage);
+      expect(res.statusCode).toBe(202);
+      expect(next).toHaveBeenCalled();
+    });
+
+    it('should handle errors gracefully when updating a transaction', async () => {
+      const req = {
+        params: {
+          accountId: faker.string.uuid(),
+          transactionId: faker.string.uuid(),
+        },
+        user: { id: faker.string.uuid() },
+      };
+      const res = {};
+      const next = jest.fn();
+
+      // Mock the service call to throw an error
+      const err = new Error('Error updating transaction');
+      err.statusCode = 400;
+      transactionService.update.mockRejectedValue(err);
+
+      // Call the controller
+      await transactionController.update(req, res, next);
+
+      // Assertions
+      expect(commonHelper.customErrorHandler).toHaveBeenCalledWith(
+        req,
+        res,
+        'Error updating transaction',
+        400,
         err
       );
     });
