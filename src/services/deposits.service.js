@@ -1,4 +1,4 @@
-const { User, UserAccount, Branch, AccountPolicy } = require('../models');
+const { User, UserAccount, AccountPolicy } = require('../models');
 const commonHelper = require('../helpers/commonFunctions.helper');
 const accountHelper = require('../helpers/accounts.helper');
 const notificationHelper = require('../helpers/notifications.helper');
@@ -36,11 +36,6 @@ async function create(payload) {
     );
   }
 
-  const branch = await Branch.findOne({ where: { id: account.branch_id } });
-  if (!branch) {
-    return commonHelper.customError('Branch associated with the account is not found.', 404);
-  }
-
   const policy = await AccountPolicy.findOne({
     where: { account_type: type },
   });
@@ -59,10 +54,6 @@ async function create(payload) {
   }
 
   const accountNumber = accountHelper.generateAccountNumber();
-  const existingAccount = await UserAccount.findOne({ where: { number: accountNumber } });
-  if (existingAccount) {
-    return commonHelper.customError('Generated account number already exists. Please retry.', 409);
-  }
 
   const lockInPeriodMonths = policy.lock_in_period;
   const maturityDate = new Date();

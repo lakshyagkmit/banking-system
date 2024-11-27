@@ -90,7 +90,7 @@ async function index(payload) {
   const role = roles.includes(ROLES['101']) ? ROLES['101'] : ROLES['102'];
 
   const offset = (page - 1) * limit;
-  let users;
+  let include = [];
 
   if (role === ROLES['101']) {
     const roles =
@@ -99,45 +99,40 @@ async function index(payload) {
         : userRole === ROLES['102']
           ? [ROLES['102']]
           : [ROLES['102'], ROLES['103']];
-
-    users = await User.findAndCountAll({
-      distinct: true,
-      include: [
-        {
-          model: Role,
-          where: { code: roles },
-          through: { attributes: [] },
-        },
-      ],
-      offset,
-      limit,
-    });
+    include = [
+      {
+        model: Role,
+        where: { code: roles },
+        through: { attributes: [] },
+      },
+    ];
   } else if (role === ROLES['102']) {
     const branch = await Branch.findOne({ where: { branch_manager_id: userId } });
 
     if (!branch) {
       return commonHelper.customError('No branch found', 404);
     }
-
-    users = await User.findAndCountAll({
-      distinct: true,
-      include: [
-        {
-          model: Role,
-          where: { code: [ROLES['103']] },
-          through: { attributes: [] },
+    include = [
+      {
+        model: Role,
+        where: { code: [ROLES['103']] },
+        through: { attributes: [] },
+      },
+      {
+        model: UserAccount,
+        where: {
+          branch_id: branch.id,
         },
-        {
-          model: UserAccount,
-          where: {
-            branch_id: branch.id,
-          },
-        },
-      ],
-      offset,
-      limit,
-    });
+      },
+    ];
   }
+
+  const users = await User.findAndCountAll({
+    distinct: true,
+    include,
+    offset,
+    limit,
+  });
 
   if (!users) {
     return commonHelper.customError('No users found', 404);
@@ -174,41 +169,40 @@ async function view(payload) {
   const { roles, id: userId } = user;
   const role = roles.includes(ROLES['101']) ? ROLES['101'] : ROLES['102'];
 
-  let userRecord;
+  let include = [];
 
   if (role === ROLES['101']) {
-    userRecord = await User.findOne({
-      where: { id },
-      include: [
-        {
-          model: Role,
-          where: { code: [ROLES['102'], ROLES['103']] },
-          through: { attributes: [] },
-        },
-      ],
-    });
+    include = [
+      {
+        model: Role,
+        where: { code: [ROLES['102'], ROLES['103']] },
+        through: { attributes: [] },
+      },
+    ];
   } else if (role === ROLES['102']) {
     const branch = await Branch.findOne({ where: { branch_manager_id: userId }, attributes: ['id'] });
 
     if (!branch) return commonHelper.customError('No branches managed by this user', 403);
 
-    userRecord = await User.findOne({
-      where: { id },
-      include: [
-        {
-          model: Role,
-          where: { code: [ROLES['103']] },
-          through: { attributes: [] },
+    include = [
+      {
+        model: Role,
+        where: { code: [ROLES['103']] },
+        through: { attributes: [] },
+      },
+      {
+        model: UserAccount,
+        where: {
+          branch_id: branch.id,
         },
-        {
-          model: UserAccount,
-          where: {
-            branch_id: branch.id,
-          },
-        },
-      ],
-    });
+      },
+    ];
   }
+
+  const userRecord = await User.findOne({
+    where: { id },
+    include,
+  });
 
   if (!userRecord) {
     return commonHelper.customError('User not found', 404);
