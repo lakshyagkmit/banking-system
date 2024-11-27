@@ -16,188 +16,126 @@ async function create(payload) {
   const { type, amount, fee, paymentMethod, accountNo } = data;
   const customerId = user.id;
 
+  const parsedAmount = parseFloat(amount);
+  const parsedFee = parseFloat(fee || 0);
+
+  const account = await UserAccount.findOne({
+    where: { id: accountId },
+    include: { model: User, where: { id: customerId } },
+  });
+
+  if (!account) return commonHelper.customError('Account not found', 404);
+
+  if (
+    [ACCOUNT_TYPES.FIXED, ACCOUNT_TYPES.RECURRING].includes(account.type) &&
+    account.maturity_date &&
+    new Date() < new Date(account.maturity_date)
+  ) {
+    return commonHelper.customError(
+      `Transactions are not allowed for ${account.type} accounts before maturity date: ${account.maturity_date.toISOString().split('T')[0]}`,
+      400
+    );
+  }
+
+  const userTransaction = await Transaction.create({
+    account_id: accountId,
+    type,
+    payment_method: paymentMethod,
+    amount: parsedAmount,
+    fee: parsedFee,
+    balance_before: account.balance,
+    balance_after: account.balance,
+    status: TRANSACTION_STATUS.PENDING,
+  });
+
   const transaction = await sequelize.transaction();
-  let debitTransaction, creditTransaction;
-
   try {
-    const customer = await User.findByPk(customerId);
-    const account = await UserAccount.findByPk(accountId);
-
-    if (!account) return commonHelper.customError('Account not found', 404);
-
-    const parsedAmount = parseFloat(amount);
-    const parsedFee = parseFloat(fee || 0);
-
-    if (
-      (account.type === ACCOUNT_TYPES.FIXED || account.type === ACCOUNT_TYPES.RECURRING) &&
-      account.maturity_date
-    ) {
-      const maturityDate = new Date(account.maturity_date);
-      const currentDate = new Date();
-      if (currentDate < maturityDate) {
-        return commonHelper.customError(
-          `Transactions are not allowed for ${account.type} accounts before the maturity date: ${maturityDate.toISOString().split('T')[0]}`,
-          400
-        );
-      }
-    }
+    const balanceBefore = parseFloat(account.balance);
+    let balanceAfter;
 
     if (type === TRANSACTION_TYPES.WITHDRAWAL) {
       if (account.status === STATUS.INACTIVE) {
         return commonHelper.customError('Account inactive, cannot proceed with transaction', 400);
       }
 
-      const balanceBefore = parseFloat(account.balance);
       if (balanceBefore < parsedAmount + parsedFee) {
         return commonHelper.customError('Insufficient funds for withdrawal', 409);
       }
 
-      const balanceAfter = parseFloat((balanceBefore - parsedAmount - parsedFee).toFixed(2));
-
+      balanceAfter = parseFloat((balanceBefore - parsedAmount - parsedFee).toFixed(2));
       await account.update({ balance: balanceAfter }, { transaction });
-
-      debitTransaction = await Transaction.create(
-        {
-          account_id: account.id,
-          type,
-          payment_method: paymentMethod,
-          amount: parsedAmount,
-          fee: parsedFee,
-          balance_before: balanceBefore,
-          balance_after: balanceAfter,
-          status: TRANSACTION_STATUS.COMPLETED,
-        },
-        { transaction }
-      );
-
-      await transaction.commit();
-      notificationHelper.transactionNotification(
-        customer.email,
-        type,
-        parsedAmount,
-        balanceBefore,
-        balanceAfter
-      );
-
-      return { message: 'Withdrawal successful' };
     } else if (type === TRANSACTION_TYPES.DEPOSIT) {
-      const balanceBefore = parseFloat(account.balance);
-      const balanceAfter = parseFloat((balanceBefore + parsedAmount).toFixed(2));
-
+      balanceAfter = parseFloat((balanceBefore + parsedAmount).toFixed(2));
       await account.update({ balance: balanceAfter, status: STATUS.ACTIVE }, { transaction });
+    } else if (type === TRANSACTION_TYPES.TRANSFER) {
+      if (account.status === STATUS.INACTIVE) {
+        return commonHelper.customError('Account inactive, cannot proceed with transaction', 400);
+      }
 
-      creditTransaction = await Transaction.create(
-        {
-          account_id: account.id,
-          type,
-          payment_method: paymentMethod,
-          amount: parsedAmount,
-          fee: 0,
-          balance_before: balanceBefore,
-          balance_after: balanceAfter,
-          status: TRANSACTION_STATUS.COMPLETED,
-        },
-        { transaction }
-      );
+      if (!accountNo) return commonHelper.customError('Please write destination account no.', 400);
+      if (accountNo === account.number) {
+        return commonHelper.customError('Source and destination accounts cannot be the same', 409);
+      }
 
-      await transaction.commit();
-      notificationHelper.transactionNotification(
-        customer.email,
-        type,
-        parsedAmount,
-        balanceBefore,
-        balanceAfter
-      );
+      const toAccount = await UserAccount.findOne({ where: { number: accountNo } });
+      if (!toAccount) return commonHelper.customError('Destination account not found', 400);
 
-      return { message: 'Deposit successful' };
+      if (balanceBefore < parsedAmount + parsedFee) {
+        return commonHelper.customError('Insufficient funds for transfer', 409);
+      }
+
+      balanceAfter = parseFloat((balanceBefore - parsedAmount - parsedFee).toFixed(2));
+      const toBalanceAfter = parseFloat((parseFloat(toAccount.balance) + parsedAmount).toFixed(2));
+
+      await Promise.all([
+        account.update({ balance: balanceAfter }, { transaction }),
+        toAccount.update({ balance: toBalanceAfter, status: STATUS.ACTIVE }, { transaction }),
+        Transaction.create(
+          {
+            account_id: toAccount.id,
+            target_account_no: account.number,
+            type,
+            payment_method: paymentMethod,
+            amount: parsedAmount,
+            fee: parsedFee,
+            balance_before: toAccount.balance,
+            balance_after: toBalanceAfter,
+            status: TRANSACTION_STATUS.COMPLETED,
+          },
+          { transaction }
+        ),
+      ]);
     }
 
-    if (account.status === STATUS.INACTIVE) {
-      return commonHelper.customError('Account inactive, cannot proceed with transaction', 400);
-    }
-
-    if (!accountNo) return commonHelper.customError('Please write destination account no.', 400);
-    if (accountNo === account.number)
-      return commonHelper.customError('Source account and destination account cannot be same', 409);
-
-    const toAccount = await UserAccount.findOne({ where: { number: accountNo } });
-    if (!toAccount) return commonHelper.customError('Destination account not found', 400);
-
-    const toAccountCustomer = await User.findByPk(toAccount.user_id);
-
-    const balanceBefore = parseFloat(account.balance);
-    if (balanceBefore < parsedAmount + parsedFee) {
-      return commonHelper.customError('Insufficient funds for transfer', 409);
-    }
-
-    const balanceAfter = parseFloat((balanceBefore - parsedAmount - parsedFee).toFixed(2));
-    const toBalanceBefore = parseFloat(toAccount.balance);
-    const toBalanceAfter = parseFloat((toBalanceBefore + parsedAmount).toFixed(2));
-
-    await account.update({ balance: balanceAfter }, { transaction });
-    await toAccount.update({ balance: toBalanceAfter, status: STATUS.ACTIVE }, { transaction });
-
-    debitTransaction = await Transaction.create(
-      {
-        account_id: account.id,
-        account_no: accountNo,
-        type,
-        payment_method: paymentMethod,
-        amount: parsedAmount,
-        fee: parsedFee,
-        balance_before: balanceBefore,
-        balance_after: balanceAfter,
-        status: TRANSACTION_STATUS.COMPLETED,
-      },
-      { transaction }
-    );
-
-    creditTransaction = await Transaction.create(
-      {
-        account_id: toAccount.id,
-        account_no: account.number,
-        type,
-        payment_method: paymentMethod,
-        amount: parsedAmount,
-        fee: 0,
-        balance_before: toBalanceBefore,
-        balance_after: toBalanceAfter,
-        status: TRANSACTION_STATUS.COMPLETED,
-      },
+    await userTransaction.update(
+      { balance_before: balanceBefore, balance_after: balanceAfter, status: TRANSACTION_STATUS.COMPLETED },
       { transaction }
     );
 
     await transaction.commit();
+
     notificationHelper.transactionNotification(
-      customer.email,
+      account.User.email,
       type,
       parsedAmount,
       balanceBefore,
       balanceAfter
     );
-    notificationHelper.transactionNotification(
-      toAccountCustomer.email,
-      type,
-      parsedAmount,
-      toBalanceBefore,
-      toBalanceAfter
-    );
 
-    return { message: 'Transfer successful' };
+    if (type === TRANSACTION_TYPES.TRANSFER) {
+      const toAccount = await UserAccount.findOne({ where: { number: accountNo }, include: { model: User } });
+      notificationHelper.transactionNotification(
+        toAccount.User.email,
+        type,
+        parsedAmount,
+        parseFloat(toAccount.balance),
+        parseFloat((parseFloat(toAccount.balance) + parsedAmount).toFixed(2))
+      );
+    }
+
+    return `${type.charAt(0).toUpperCase() + type.slice(1).toLowerCase()} successful`;
   } catch (error) {
     await transaction.rollback();
-
-    if (debitTransaction) {
-      await debitTransaction.update({ status: TRANSACTION_STATUS.FAILED }).catch(() => {
-        console.error('Failed to update debit transaction status to failed');
-      });
-    }
-    if (creditTransaction) {
-      await creditTransaction.update({ status: TRANSACTION_STATUS.FAILED }).catch(() => {
-        console.error('Failed to update credit transaction status to failed');
-      });
-    }
-
     throw error;
   }
 }
@@ -211,14 +149,12 @@ async function index(payload) {
 
   const offset = (page - 1) * limit;
 
-  let transactions;
+  const account = await UserAccount.findByPk(accountId);
+  if (!account) {
+    return commonHelper.customError('No account found', 404);
+  }
+
   if (role === ROLES['102']) {
-    const account = await UserAccount.findByPk(accountId);
-
-    if (!account) {
-      return commonHelper.customError('No account found', 404);
-    }
-
     const branch = await Branch.findOne({
       where: { branch_manager_id: id },
     });
@@ -226,35 +162,16 @@ async function index(payload) {
     if (branch.id !== account.branch_id) {
       return commonHelper.customError("Cannot access other account's branch transaction history", 403);
     }
-
-    transactions = await Transaction.findAndCountAll({
-      where: { account_id: accountId },
-      offset: offset,
-      limit: limit,
-      order: [['created_at', 'DESC']],
-    });
-  } else if (role === ROLES['103']) {
-    const account = await UserAccount.findOne({
-      where: {
-        id: accountId,
-      },
-      include: {
-        model: User,
-        where: { id },
-      },
-    });
-
-    if (!account) {
-      return commonHelper.customError('Account not found', 404);
-    }
-
-    transactions = await Transaction.findAndCountAll({
-      where: { account_id: accountId },
-      offset: offset,
-      limit: limit,
-      order: [['created_at', 'DESC']],
-    });
+  } else if (role === ROLES['103'] && account.user_id !== id) {
+    return commonHelper.customError('Cannot access other customer transaction history', 403);
   }
+
+  const transactions = await Transaction.findAndCountAll({
+    where: { account_id: accountId },
+    offset: offset,
+    limit: limit,
+    order: [['created_at', 'DESC']],
+  });
 
   if (!transactions) {
     return commonHelper.customError('No transactions found', 404);
@@ -270,8 +187,7 @@ async function index(payload) {
 
 // list transactions by id
 async function view(payload) {
-  const { params, user } = payload;
-  const { accountId, transactionId } = params;
+  const { accountId, transactionId, user } = payload;
   const { id, roles } = user;
   const role = roles.includes(ROLES['102']) ? ROLES['102'] : ROLES['103'];
 
@@ -281,7 +197,6 @@ async function view(payload) {
     return commonHelper.customError('Account not found', 404);
   }
 
-  let transaction;
   if (role === ROLES['102']) {
     const branch = await Branch.findOne({
       where: { branch_manager_id: id },
@@ -290,21 +205,16 @@ async function view(payload) {
     if (branch.id !== account.branch_id) {
       return commonHelper.customError("Cannot access other account's branch transaction history", 403);
     }
-
-    transaction = await Transaction.findOne({
-      where: {
-        id: transactionId,
-        account_id: accountId,
-      },
-    });
-  } else if (role === ROLES['103'] && account.user_id === id) {
-    transaction = await Transaction.findOne({
-      where: {
-        id: transactionId,
-        account_id: accountId,
-      },
-    });
+  } else if (role === ROLES['103'] && account.user_id !== id) {
+    return commonHelper.customError('Cannot access other customer transaction history', 403);
   }
+
+  const transaction = await Transaction.findOne({
+    where: {
+      id: transactionId,
+      account_id: accountId,
+    },
+  });
 
   if (!transaction) {
     return commonHelper.customError('Transaction not found', 404);
@@ -313,4 +223,53 @@ async function view(payload) {
   return transaction;
 }
 
-module.exports = { create, index, view };
+async function update(payload) {
+  const { accountId, transactionId, user } = payload;
+  const { id } = user;
+
+  const account = await UserAccount.findOne({
+    where: { id: accountId },
+    include: { model: User },
+  });
+
+  if (!account) {
+    return commonHelper.customError('Account not found', 404);
+  }
+
+  const branch = await Branch.findOne({
+    where: { branch_manager_id: id },
+  });
+
+  if (branch.id !== account.branch_id) {
+    return commonHelper.customError("Cannot access other account's branch transaction history", 403);
+  }
+
+  const transaction = await Transaction.findOne({
+    where: {
+      id: transactionId,
+      account_id: accountId,
+    },
+  });
+
+  if (!transaction) {
+    return commonHelper.customError('Transaction not found', 404);
+  }
+
+  if (transaction.status === TRANSACTION_STATUS.FAILED) {
+    return commonHelper.customError('Transaction is already marked as failed', 400);
+  }
+
+  if (transaction.status !== TRANSACTION_STATUS.PENDING) {
+    return commonHelper.customError('Only pending transactions can be marked as failed', 400);
+  }
+
+  await transaction.update({
+    status: TRANSACTION_STATUS.FAILED,
+  });
+
+  notificationHelper.failedTransactionNotification(account.User.email, transaction.type, transaction.amount);
+
+  return 'Transaction status updated to failed';
+}
+
+module.exports = { create, index, view, update };

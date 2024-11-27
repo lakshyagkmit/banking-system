@@ -108,6 +108,22 @@ async function transactionNotification(email, transactionType, amount, balanceBe
   await transporter.sendMail(mailOptions);
 }
 
+async function failedTransactionNotification(email, transactionType, amount) {
+  const mailOptions = {
+    from: process.env.SMPT_MAIL,
+    to: email,
+    subject: `Transaction Failed Alert: ${transactionType}`,
+    html: `
+      <p>Dear User,</p>
+      <p>The transaction of type ${transactionType.toLowerCase()} of <strong>₹${amount}</strong> has been failed.</p>
+      <p>Thank you for banking with us.</p>
+      <p>Federal Bank</p>
+    `,
+  };
+
+  await transporter.sendMail(mailOptions);
+}
+
 module.exports = {
   sendOtp,
   applicationRequestNotification,
@@ -115,4 +131,5 @@ module.exports = {
   accountCreationNotification,
   lockerAssignedNotification,
   transactionNotification,
+  failedTransactionNotification,
 };
