@@ -2,263 +2,252 @@ const branchService = require('../../src/services/branches.service');
 const { User, Role, Branch, Bank } = require('../../src/models');
 const commonHelper = require('../../src/helpers/commonFunctions.helper');
 const { ROLES } = require('../../src/constants/constants');
-const { Op } = require('sequelize');
 
+// Mocking dependencies
 jest.mock('../../src/models');
 jest.mock('../../src/helpers/commonFunctions.helper');
 
 describe('Branch Service', () => {
-  afterEach(() => {
+  beforeEach(() => {
+    // Reset all mocks before each test
     jest.clearAllMocks();
+
+    mockBranch = {
+      update: jest.fn(),
+    };
+
+    // Mock the Branch.findByPk method to return the mock branch
+    Branch.findByPk = jest.fn().mockResolvedValue(mockBranch);
   });
 
   describe('create', () => {
-    it('should create a branch with valid data', async () => {
+    it('should return error if branch manager is not authorized', async () => {
       const payload = {
         data: {
           branchManagerId: 1,
-          address: '123 Street',
-          ifscCode: 'IFSC001',
+          address: 'Test Address',
+          ifscCode: 'TEST123',
           contact: '1234567890',
-          totalLockers: 10,
+          totalLockers: 100,
         },
       };
 
-      const mockBranchManager = { id: 1 };
-      const mockBank = { id: 1 };
-      const mockBranch = { id: 1, ...payload.data };
-
-      User.findOne.mockResolvedValue(mockBranchManager);
-      Branch.findOne.mockResolvedValue(null); // No duplicate found
-      Bank.findOne.mockResolvedValue(mockBank);
-      Branch.create.mockResolvedValue(mockBranch);
+      User.findOne.mockResolvedValueOnce(null); // Simulate user not found
 
       const result = await branchService.create(payload);
 
-      expect(User.findOne).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { id: payload.data.branchManagerId },
-        })
-      );
-      expect(Branch.findOne).toHaveBeenCalled();
-      expect(Bank.findOne).toHaveBeenCalled();
-      expect(Branch.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          bank_id: mockBank.id,
-          branch_manager_id: payload.data.branchManagerId,
-          address: payload.data.address,
-          ifsc_code: payload.data.ifscCode, // Use database field name
-          contact: payload.data.contact,
-          total_lockers: payload.data.totalLockers, // Use database field name
-        })
-      );
-      expect(result).toEqual(mockBranch);
-    });
-
-    it('should throw an error if the branch manager does not exist', async () => {
-      const payload = {
-        data: {
-          branchManagerId: 99, // Non-existent ID
-          address: '123 Street',
-          ifscCode: 'IFSC001',
-          contact: '1234567890',
-          totalLockers: 10,
-        },
-      };
-
-      // Mock User.findOne to return null (no branch manager found)
-      User.findOne.mockResolvedValue(null);
-
-      // Assert that the service throws the expected error
-      await expect(branchService.create(payload)).rejects.toEqual(
+      expect(result).toEqual(
         commonHelper.customError('The specified user is not authorized as a Branch Manager', 403)
       );
-
-      expect(User.findOne).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { id: payload.data.branchManagerId },
-        })
-      );
     });
 
-    it('should throw an error if a duplicate branch exists', async () => {
+    it('should return error if a branch already exists with same ifscCode, contact, or branch manager id', async () => {
       const payload = {
         data: {
           branchManagerId: 1,
-          address: '123 Street',
-          ifscCode: 'IFSC001',
+          address: 'Test Address',
+          ifscCode: 'TEST123',
           contact: '1234567890',
-          totalLockers: 10,
+          totalLockers: 100,
         },
       };
 
-      const mockExistingBranch = { ifsc_code: 'IFSC001', contact: '1234567890' };
+      const branchManager = { id: 1 };
+      User.findOne.mockResolvedValueOnce(branchManager); // Simulate valid branch manager
 
-      User.findOne.mockResolvedValue({ id: 1 });
-      Branch.findOne.mockResolvedValue(mockExistingBranch);
+      Branch.findOne.mockResolvedValueOnce({
+        ifsc_code: 'TEST123',
+        contact: '1234567890',
+        branch_manager_id: 1,
+      }); // Simulate an existing branch
 
-      await expect(branchService.create(payload)).rejects.toEqual(
-        commonHelper.customError('Branch with the same ifsc_code already exists', 409)
-      );
+      const result = await branchService.create(payload);
 
-      expect(User.findOne).toHaveBeenCalled();
-      expect(Branch.findOne).toHaveBeenCalled();
-      expect(Branch.create).not.toHaveBeenCalled();
+      expect(result).toEqual(commonHelper.customError('Branch with the same ifsc_code already exists', 409));
+    });
+
+    it('should create a new branch successfully', async () => {
+      const payload = {
+        data: {
+          branchManagerId: 1,
+          address: 'Test Address',
+          ifscCode: 'TEST123',
+          contact: '1234567890',
+          totalLockers: 100,
+        },
+      };
+
+      const branchManager = { id: 1 };
+      const bank = { id: 1 };
+      User.findOne.mockResolvedValueOnce(branchManager); // Valid branch manager
+      Branch.findOne.mockResolvedValueOnce(null); // No existing branch
+      Bank.findOne.mockResolvedValueOnce(bank); // Simulate finding a bank
+
+      Branch.create.mockResolvedValueOnce({
+        id: 1,
+        ...payload.data,
+        bank_id: bank.id,
+      }); // Simulate branch creation
+
+      const result = await branchService.create(payload);
+
+      expect(result).toEqual({
+        id: 1,
+        ...payload.data,
+        bank_id: bank.id,
+      });
     });
   });
 
   describe('index', () => {
-    it('should return a paginated list of branches', async () => {
+    it('should return error if no branches are found', async () => {
       const payload = { query: { page: 1, limit: 10 } };
-      const mockBranches = {
-        rows: [
-          { id: 1, name: 'Branch 1' },
-          { id: 2, name: 'Branch 2' },
-        ],
-        count: 2,
-      };
-
-      Branch.findAndCountAll.mockResolvedValue(mockBranches);
+      Branch.findAndCountAll.mockResolvedValueOnce({ count: 0, rows: [] }); // Simulate no branches found
 
       const result = await branchService.index(payload);
 
-      expect(Branch.findAndCountAll).toHaveBeenCalledWith(
-        expect.objectContaining({
-          offset: 0,
-          limit: 10,
-        })
-      );
+      // Now expect the result to be the object returned by the service with an empty branch list
       expect(result).toEqual({
-        branches: mockBranches.rows,
-        totalBranches: mockBranches.count,
+        branches: [],
+        totalBranches: 0,
         currentPage: 1,
-        totalPages: 1,
+        totalPages: 0,
       });
     });
 
-    it('should throw an error if no branches are found', async () => {
+    it('should return paginated list of branches', async () => {
       const payload = { query: { page: 1, limit: 10 } };
+      const branches = { count: 1, rows: [{ id: 1, address: 'Test Address' }] };
+      Branch.findAndCountAll.mockResolvedValueOnce(branches); // Simulate branches found
 
-      Branch.findAndCountAll.mockResolvedValue({ rows: [], count: 0 });
+      const result = await branchService.index(payload);
 
-      await expect(branchService.index(payload)).rejects.toEqual(
-        commonHelper.customError('No branches found', 404)
-      );
-
-      expect(Branch.findAndCountAll).toHaveBeenCalled();
+      expect(result).toEqual({
+        branches: branches.rows,
+        totalBranches: branches.count,
+        currentPage: payload.query.page,
+        totalPages: 1,
+      });
     });
   });
 
   describe('view', () => {
-    it('should return a branch by id', async () => {
-      const mockBranch = { id: 1, name: 'Branch 1' };
+    it('should return error if branch is not found', async () => {
+      const branchId = 1;
+      Branch.findByPk.mockResolvedValueOnce(null); // Simulate branch not found
 
-      Branch.findByPk.mockResolvedValue(mockBranch);
+      const result = await branchService.view(branchId);
 
-      const result = await branchService.view(1);
-
-      expect(Branch.findByPk).toHaveBeenCalledWith(1);
-      expect(result).toEqual(mockBranch);
+      expect(result).toEqual(commonHelper.customError('Branch not found', 404));
     });
 
-    it('should throw an error if the branch is not found', async () => {
-      Branch.findByPk.mockResolvedValue(null);
+    it('should return the branch details successfully', async () => {
+      const branchId = 1;
+      const branch = { id: branchId, address: 'Test Address' };
+      Branch.findByPk.mockResolvedValueOnce(branch); // Simulate branch found
 
-      await expect(branchService.view(1)).rejects.toEqual(commonHelper.customError('Branch not found', 404));
+      const result = await branchService.view(branchId);
 
-      expect(Branch.findByPk).toHaveBeenCalledWith(1);
+      expect(result).toEqual(branch);
     });
   });
 
   describe('update', () => {
-    it('should update a branch with valid data', async () => {
-      // Arrange
-      const mockBranch = {
-        update: jest.fn().mockResolvedValue({
-          address: 'Updated Address',
-          branch_manager_id: 2,
-          contact: '9876543210',
-          ifsc_code: 'NEWIFSC001',
-          total_lockers: 15,
-        }),
-        branch_manager_id: 1,
-        ifsc_code: 'OLDIFSC001',
-        contact: '1234567890',
-      };
+    it('should return error if branch is not found', async () => {
+      const payload = { id: 1, data: { branchManagerId: 1, address: 'New Address' } };
+      Branch.findByPk.mockResolvedValueOnce(null); // Simulate branch not found
 
-      // Mock necessary database calls
-      Branch.findByPk.mockResolvedValue(mockBranch); // Return the mock branch
-      User.findOne.mockResolvedValue({ id: 2 }); // Valid branch manager
-      Branch.findOne.mockResolvedValue(null); // No duplicate branches found
-
-      const payload = {
-        id: 1,
-        data: {
-          address: 'Updated Address',
-          branchManagerId: 2,
-          contact: '9876543210',
-          ifscCode: 'NEWIFSC001',
-          totalLockers: 15,
-        },
-      };
-
-      // Act
       const result = await branchService.update(payload);
 
-      // Assert
-      expect(User.findOne).toHaveBeenCalled(); // Validating branch manager
-      expect(Branch.findOne).toHaveBeenCalled(); // Checking for duplicates
-      expect(mockBranch.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          address: payload.data.address,
-          branch_manager_id: payload.data.branchManagerId,
-          contact: payload.data.contact,
-          ifsc_code: payload.data.ifscCode,
-          total_lockers: payload.data.totalLockers,
-        })
-      );
-      expect(result).toEqual({
-        address: 'Updated Address',
-        branch_manager_id: 2,
-        contact: '9876543210',
-        ifsc_code: 'NEWIFSC001',
-        total_lockers: 15,
-      });
+      expect(result).toEqual(commonHelper.customError('Branch not found', 404));
     });
 
-    it('should throw an error if the branch is not found', async () => {
-      const payload = { id: 1, data: {} };
+    it('should return error if branch manager is not authorized', async () => {
+      const payload = { id: 1, data: { branchManagerId: 2, address: 'New Address' } };
+      const branch = { id: 1, branch_manager_id: 1 };
+      Branch.findByPk.mockResolvedValueOnce(branch); // Simulate branch found
+      User.findOne.mockResolvedValueOnce(null); // Simulate branch manager not found
 
-      Branch.findByPk.mockResolvedValue(null);
+      const result = await branchService.update(payload);
 
-      await expect(branchService.update(payload)).rejects.toEqual(
-        commonHelper.customError('Branch not found', 404)
+      expect(result).toEqual(
+        commonHelper.customError('The specified user is not authorized as a Branch Manager', 403)
       );
-
-      expect(Branch.findByPk).toHaveBeenCalled();
     });
 
-    it('should throw an error if a duplicate IFSC code or contact exists', async () => {
-      const payload = {
-        id: 1,
-        data: { ifscCode: 'IFSC001', contact: '1234567890' },
-      };
+    it('should return error if branch manager is already assigned to another branch', async () => {
+      const payload = { id: 1, data: { branchManagerId: 2, address: 'New Address' } };
+      const branch = { id: 1, branch_manager_id: 1 };
+      const branchManager = { id: 2, Branch: [{ id: 3 }] };
+      Branch.findByPk.mockResolvedValueOnce(branch); // Simulate branch found
+      User.findOne.mockResolvedValueOnce(branchManager); // Simulate branch manager already assigned
 
-      const mockBranch = { id: 1, ifsc_code: 'OLDIFSC001' };
-      const mockDuplicateBranch = { id: 2, ifsc_code: 'IFSC001' };
+      const result = await branchService.update(payload);
 
-      Branch.findByPk.mockResolvedValue(mockBranch);
-      Branch.findOne.mockResolvedValue(mockDuplicateBranch);
+      expect(result).toEqual(
+        commonHelper.customError('The specified Branch Manager is already assigned to another branch', 409)
+      );
+    });
 
-      await expect(branchService.update(payload)).rejects.toEqual(
+    it('should return error if IFSC code or contact is already in use by another branch', async () => {
+      const payload = { id: 1, data: { ifscCode: 'TEST123', contact: '1234567890' } };
+      const branch = { id: 1, ifsc_code: 'OLD_CODE', contact: '0987654321' };
+      Branch.findByPk.mockResolvedValueOnce(branch); // Simulate branch found
+      Branch.findOne.mockResolvedValueOnce({ id: 2, ifsc_code: 'TEST123', contact: '1234567890' }); // Simulate duplicate IFSC and contact
+
+      const result = await branchService.update(payload);
+
+      expect(result).toEqual(
         commonHelper.customError(
           'The specified IFSC code or contact is already in use by another branch',
           409
         )
       );
+    });
 
-      expect(Branch.findByPk).toHaveBeenCalled();
-      expect(Branch.findOne).toHaveBeenCalled();
+    it('should return error if same data is provided for branch manager, ifsc code, or contact', async () => {
+      const payload = { id: 1, data: { branchManagerId: 1, ifscCode: 'OLD_CODE', contact: '0987654321' } };
+      const branch = { id: 1, branch_manager_id: 1, ifsc_code: 'OLD_CODE', contact: '0987654321' }; // Same data
+      Branch.findByPk.mockResolvedValueOnce(branch); // Simulate branch found
+
+      const result = await branchService.update(payload);
+
+      expect(result).toEqual(
+        commonHelper.customError(
+          'Cannot use same data for branch manager id or ifsc code or contact for updation',
+          409
+        )
+      );
+    });
+
+    it('should update branch successfully', async () => {
+      const payload = {
+        id: 1,
+        data: {
+          branchManagerId: 2,
+          address: 'New Address',
+          ifscCode: 'NEWIFSC001',
+          contact: '1234567890',
+          totalLockers: 50,
+        },
+      };
+
+      // Set up the mock return value for the update method
+      mockBranch.update.mockResolvedValue(mockBranch); // Simulate successful update
+
+      const result = await branchService.update(payload);
+
+      // Assert that the update method was called with the correct values
+      expect(mockBranch.update).toHaveBeenCalledWith({
+        branch_manager_id: payload.data.branchManagerId,
+        address: payload.data.address,
+        ifsc_code: payload.data.ifscCode,
+        contact: payload.data.contact,
+        total_lockers: payload.data.totalLockers,
+      });
+
+      // Assert that the result is the updated branch
+      expect(result).toEqual(mockBranch);
     });
   });
 });

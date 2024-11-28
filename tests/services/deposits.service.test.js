@@ -140,7 +140,7 @@ describe('Deposit Account Controller - create', () => {
       },
     };
 
-    UserAccount.findOne.mockResolvedValue(null);
+    UserAccount.findOne.mockResolvedValueOnce(null);
 
     const result = await create(mockPayload);
 
@@ -260,8 +260,8 @@ describe('Deposit Account Controller - create', () => {
     UserAccount.findOne
       .mockResolvedValueOnce(mockAccount) // Active account exists
       .mockResolvedValueOnce({ id: 2 }); // Duplicate account number exists
-    Branch.findOne.mockResolvedValue({ id: 101 });
-    AccountPolicy.findOne.mockResolvedValue(mockPolicy);
+    Branch.findOne.mockResolvedValueOnce({ id: 101 });
+    AccountPolicy.findOne.mockResolvedValueOnce(mockPolicy);
 
     const result = await create(mockPayload);
 

@@ -1,4 +1,3 @@
-// userService.test.js
 const { User, Role, Branch, UserAccount, sequelize } = require('../../src/models');
 const { Op } = require('sequelize');
 const bcrypt = require('bcryptjs');

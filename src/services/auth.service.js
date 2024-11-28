@@ -125,7 +125,7 @@ async function verifyOtp(payload) {
   const { email, otp } = data;
 
   if (!(await otpHelper.verifyOtp(email, otp))) {
-    throw commonHelper.customError('Invalid OTP', 400);
+    return commonHelper.customError('Invalid OTP', 400);
   }
 
   const user = await User.findOne({
@@ -137,7 +137,7 @@ async function verifyOtp(payload) {
   });
 
   if (!user) {
-    throw commonHelper.customError('User not found', 404);
+    return commonHelper.customError('User not found', 404);
   }
 
   otpHelper.deleteOtp(email);

@@ -219,4 +219,76 @@ describe('Application Service', () => {
       expect(result).toEqual(commonHelper.customError('Application not found', 404));
     });
   });
+
+  describe('requestAccount - Additional Test Cases', () => {
+    it('should return error if branch manager or customer is not found', async () => {
+      const payload = {
+        data: {
+          branchIfscCode: 'ABC123',
+          type: 'SAVINGS',
+          nomineeName: 'John Doe',
+        },
+        user: { id: 1 },
+      };
+
+      const mockBranch = { id: 1, branch_manager_id: 2, ifsc_code: 'ABC123' };
+      Branch.findOne.mockResolvedValue(mockBranch);
+      User.findByPk.mockResolvedValueOnce(null).mockResolvedValueOnce(null); // Branch Manager and Customer not found
+
+      const result = await requestAccount(payload);
+
+      expect(result).toEqual(commonHelper.customError('User not found', 404));
+    });
+  });
+
+  describe('requestLocker - Additional Test Cases', () => {
+    it('should return error if branch is not found', async () => {
+      const payload = {
+        data: { type: 'SMALL' },
+        user: { id: 1 },
+      };
+
+      UserAccount.findOne.mockResolvedValue({ id: 1, branch_id: 1 });
+      Branch.findByPk.mockResolvedValue(null); // Branch not found
+
+      const result = await requestLocker(payload);
+
+      expect(result).toEqual(commonHelper.customError('No branch Found.', 404));
+    });
+
+    it('should return error if branch manager or customer is not found', async () => {
+      const payload = {
+        data: { type: 'SMALL' },
+        user: { id: 1 },
+      };
+
+      const mockAccount = { id: 1, branch_id: 1 };
+      const mockBranch = { id: 1, branch_manager_id: 2, ifsc_code: 'ABC123' };
+
+      UserAccount.findOne.mockResolvedValue(mockAccount);
+      Branch.findByPk.mockResolvedValue(mockBranch);
+      UserLocker.findOne.mockResolvedValue(null);
+      User.findByPk.mockResolvedValueOnce(null).mockResolvedValueOnce(null); // Branch Manager and Customer not found
+
+      const result = await requestLocker(payload);
+
+      expect(result).toEqual(commonHelper.customError('User not found', 404));
+    });
+  });
+
+  describe('index - Additional Test Cases', () => {
+    it('should return error if applications is null', async () => {
+      const payload = {
+        query: { page: 1, limit: 10, requestType: 'accounts' },
+        user: { id: 1 },
+      };
+
+      Branch.findOne.mockResolvedValue({ id: 1, ifsc_code: 'ABC123' });
+      UserApplication.findAndCountAll.mockResolvedValue(null); // Applications null
+
+      const result = await index(payload);
+
+      expect(result).toEqual(commonHelper.customError('No applications found', 404));
+    });
+  });
 });
