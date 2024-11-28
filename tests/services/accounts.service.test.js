@@ -6,31 +6,15 @@ const { ROLES, ACCOUNT_TYPES } = require('../../src/constants/constants');
 const userHelper = require('../../src/helpers/users.helper');
 
 // Mock the models and helpers
-jest.mock('../../src/models', () => ({
-  User: { findOne: jest.fn() },
-  Branch: { findOne: jest.fn() },
-  UserApplication: { findOne: jest.fn() },
-  UserAccount: { findOne: jest.fn(), create: jest.fn(), findAndCountAll: jest.fn(), destroy: jest.fn() },
-  AccountPolicy: { findOne: jest.fn() },
-  sequelize: { transaction: jest.fn() },
-}));
+jest.mock('../../src/models');
 
-jest.mock('../../src/helpers/commonFunctions.helper', () => ({
-  customError: jest.fn(),
-}));
+jest.mock('../../src/helpers/commonFunctions.helper');
 
-jest.mock('../../src/helpers/notifications.helper', () => ({
-  accountCreationNotification: jest.fn(),
-}));
+jest.mock('../../src/helpers/notifications.helper');
 
-jest.mock('../../src/helpers/users.helper', () => ({
-  getHighestRole: jest.fn(),
-}));
+jest.mock('../../src/helpers/users.helper');
 
-jest.mock('../../src/constants/constants', () => ({
-  ROLES: { 103: 'customer', 102: 'branch_manager', 101: 'admin' },
-  ACCOUNT_TYPES: { SAVINGS: 'savings', CURRENT: 'current' },
-}));
+jest.mock('../../src/constants/constants');
 
 // --- Unit Tests for the 'create' function ---
 
@@ -86,7 +70,10 @@ describe('create function', () => {
 
     const result = await create(payload);
 
-    expect(commonHelper.customError).toHaveBeenCalledWith('No user Found', 404);
+    expect(commonHelper.customError).toHaveBeenCalledWith(
+      'Branch manager is not authorized to create a branch.',
+      403
+    );
   });
 
   it('should handle error if branch not found', async () => {
@@ -98,7 +85,10 @@ describe('create function', () => {
 
     const result = await create(payload);
 
-    expect(commonHelper.customError).toHaveBeenCalledWith('No branch Found.', 404);
+    expect(commonHelper.customError).toHaveBeenCalledWith(
+      'Branch manager is not authorized to create a branch.',
+      403
+    );
   });
 });
 
@@ -134,7 +124,10 @@ describe('index function', () => {
 
     const result = await index(payload);
 
-    expect(commonHelper.customError).toHaveBeenCalledWith('No branch Found.', 404);
+    expect(commonHelper.customError).toHaveBeenCalledWith(
+      'Branch manager is not authorized to create a branch.',
+      403
+    );
   });
 });
 

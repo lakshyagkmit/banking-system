@@ -207,6 +207,16 @@ describe('Auth Service', () => {
       expect(result).toBe('jwtToken');
       expect(otpHelper.deleteOtp).toHaveBeenCalledWith('johndoe@example.com');
     });
+
+    it('should return error if user is not found', async () => {
+      const payload = { data: { email: 'johndoe@example.com', otp: '123456' } };
+
+      otpHelper.verifyOtp.mockResolvedValueOnce(true); // Simulating valid OTP
+      User.findOne.mockResolvedValueOnce(null); // Simulating user not found
+
+      // Expect verifyOtp to throw an error with the expected message
+      await expect(verifyOtp(payload)).rejects.toEqual(commonHelper.customError('User not found', 404));
+    });
   });
 
   describe('resendOtp', () => {
@@ -225,7 +235,86 @@ describe('Auth Service', () => {
     it('should return error if user not found', async () => {
       const payload = { data: { email: 'johndoe@example.com' } };
 
-      User.findOne.mockResolvedValue(null);
+      User.findOne.mockResolvedValueOnce(null);
+
+      const result = await resendOtp(payload);
+
+      expect(result).toEqual(commonHelper.customError('User not found', 404));
+    });
+  });
+
+  describe('register', () => {
+    it('should return error if gov issue image is missing', async () => {
+      const payload = {
+        data: {
+          name: 'John Doe',
+          email: 'johndoe@example.com',
+          password: 'password123',
+          contact: '1234567890',
+          govIssueIdType: 'Aadhar',
+          fatherName: 'Father Name',
+          motherName: 'Mother Name',
+          address: '123 Main St',
+        },
+        file: null, // Mocking file buffer
+      };
+
+      const result = await register(payload);
+
+      expect(result).toEqual(commonHelper.customError('Please add gov_issue_id_image', 400));
+    });
+
+    it('should rollback the transaction and throw an error if an exception occurs during registration', async () => {
+      const payload = {
+        data: {
+          name: 'John Doe',
+          email: 'johndoe@example.com',
+          password: 'password123',
+          contact: '1234567890',
+          govIssueIdType: 'Aadhar',
+          fatherName: 'Father Name',
+          motherName: 'Mother Name',
+          address: '123 Main St',
+        },
+        file: { buffer: 'fileBuffer' },
+      };
+
+      const mockTransaction = {
+        commit: jest.fn(),
+        rollback: jest.fn(),
+      };
+      sequelize.transaction.mockResolvedValue(mockTransaction);
+
+      awsHelper.uploadImageToS3.mockRejectedValueOnce(new Error('S3 Upload Error'));
+
+      const result = await register(payload);
+
+      expect(mockTransaction.rollback).toHaveBeenCalled();
+      expect(result).toEqual(new Error('S3 Upload Error'));
+    });
+  });
+
+  describe('verifyEmail', () => {
+    it('should return error if OTP is invalid', async () => {
+      const payload = { data: { email: 'johndoe@example.com', otp: 'invalidOtp' } };
+
+      otpHelper.verifyOtp.mockResolvedValueOnce(false);
+
+      const mockUser = { id: 1, email: 'johndoe@example.com', is_verified: false, update: jest.fn() };
+      User.findOne.mockResolvedValue(mockUser);
+
+      const result = await verifyEmail(payload);
+
+      expect(result).toEqual(commonHelper.customError('Invalid OTP', 400));
+      expect(mockUser.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('resendOtp', () => {
+    it('should return error if user is not found', async () => {
+      const payload = { data: { email: 'johndoe@example.com' } };
+
+      User.findOne.mockResolvedValueOnce(null); // Simulating user not found
 
       const result = await resendOtp(payload);
 
