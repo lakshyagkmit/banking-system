@@ -137,10 +137,6 @@ async function index(payload) {
     limit: limit,
   });
 
-  if (!accounts) {
-    return commonHelper.customError('No accounts found', 404);
-  }
-
   return {
     totalItems: accounts.count,
     totalPages: Math.ceil(accounts.count / limit),
