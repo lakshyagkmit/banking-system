@@ -175,10 +175,6 @@ async function index(payload) {
     limit: limit,
   });
 
-  if (!lockers) {
-    return commonHelper.customError('No lockers found', 404);
-  }
-
   return {
     totalItems: lockers.count,
     totalPages: Math.ceil(lockers.count / limit),

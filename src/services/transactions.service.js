@@ -173,10 +173,6 @@ async function index(payload) {
     order: [['created_at', 'DESC']],
   });
 
-  if (!transactions) {
-    return commonHelper.customError('No transactions found', 404);
-  }
-
   return {
     totalItems: transactions.count,
     totalPages: Math.ceil(transactions.count / limit),

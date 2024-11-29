@@ -136,10 +136,6 @@ async function index(payload) {
     },
   });
 
-  if (!applications) {
-    return commonHelper.customError('No applications found', 404);
-  }
-
   return {
     totalItems: applications.count,
     totalPages: Math.ceil(applications.count / limit),

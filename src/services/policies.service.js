@@ -42,10 +42,6 @@ async function index(payload) {
     limit: limit,
   });
 
-  if (!policies) {
-    return commonHelper.customError('No policies found', 404);
-  }
-
   return {
     policies: policies.rows,
     totalPolicies: policies.count,

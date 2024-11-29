@@ -20,7 +20,6 @@ async function create(payload) {
   if (!branchManager) {
     return commonHelper.customError('The specified user is not authorized as a Branch Manager', 403);
   }
-
   const existingBranch = await Branch.findOne({
     where: {
       [Op.or]: [{ ifsc_code: ifscCode }, { contact }, { branch_manager_id: branchManagerId }],

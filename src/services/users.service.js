@@ -134,10 +134,6 @@ async function index(payload) {
     limit,
   });
 
-  if (!users) {
-    return commonHelper.customError('No users found', 404);
-  }
-
   return {
     totalItems: users.count,
     totalPages: Math.ceil(users.count / limit),
